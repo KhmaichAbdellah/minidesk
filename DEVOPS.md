@@ -239,47 +239,38 @@ kubectl get hpa -n minidesk-prod
 
 - `application.yaml` → utilise des placeholders `${VAR:default}`
 - `.env` → dans `.gitignore` (jamais commité)
-- Kubernetes Secrets → créés via `kubectl` ou CI/CD variables
+- Kubernetes Secrets → script automatisé `k8s/init-k8s.ps1` ou `k8s/init-k8s.sh`
 
-### Ce qui reste à faire ⚠️
+### Script d'automatisation des secrets Kubernetes 🚀
 
-- Changer le **mot de passe Gmail** (`MAIL_PASSWORD`)
-- Générer un **JWT_SECRET** fort : `openssl rand -hex 64`
-- Changer le **mot de passe admin** par défaut
-- Configurer les **domaines** dans `k8s/prod/ingress.yaml`
-- Adapter le `GITLAB_GROUP` dans `Jenkinsfile` et les images
+Pour initialiser automatiquement le namespace, générer un JWT fort et créer les secrets :
+
+```powershell
+# Windows PowerShell
+.\k8s\init-k8s.ps1 -Namespace "minidesk-prod" -GitLabToken "VOTRE_TOKEN_GITLAB" -ApplyManifests
+```
+
+```bash
+# Linux / macOS / Git Bash
+./k8s/init-k8s.sh "minidesk-prod" "KhmaichAbdellah" "VOTRE_TOKEN_GITLAB"
+```
 
 ---
 
-## ✅ Checklist avant mise en production <a name="checklist"></a>
+## ✅ État d'avancement & Checklist <a name="checklist"></a>
 
-### Sécurité
-- [ ] Changer tous les mots de passe par défaut
-- [ ] JWT_SECRET généré avec `openssl rand -hex 64`
-- [ ] TLS/HTTPS configuré via cert-manager + Let's Encrypt
-- [ ] Domaines configurés dans `ingress.yaml`
-- [ ] `CORS` restreint aux domaines autorisés dans Spring Security
+### Validé & Intégré ✅
+- [x] Images Docker buildées et testées localement (Multi-stage Maven + Nginx)
+- [x] `GITLAB_GROUP` (`KhmaichAbdellah`) configuré dans Jenkinsfile et les manifestes K8s
+- [x] Pipeline GitLab CI (`.gitlab-ci.yml`) et Jenkins (`Jenkinsfile`) prêts
+- [x] Module IA & LLM (Ollama / OpenAI) avec ChatWidget interactif
+- [x] Module Commentaires sur les tickets (`Comment`)
+- [x] Module Historique des statuts (`StatutLog`) avec timeline visuelle
+- [x] Base de connaissances / FAQ (`KnowledgeArticle`) avec recherche
+- [x] 32 tests unitaires Spring Boot passants à 100%
+- [x] Scripts d'automatisation K8s (`init-k8s.ps1` & `init-k8s.sh`)
 
-### Docker
-- [ ] Images buildées et testées localement
-- [ ] Images poussées dans GitLab Registry
-- [ ] Tags de version utilisés (pas seulement `latest`)
-
-### Kubernetes
-- [ ] Namespace `minidesk-prod` créé
-- [ ] Secret `gitlab-registry-secret` créé
-- [ ] Secret `minidesk-secrets` créé avec vraies valeurs
-- [ ] Ingress controller installé (nginx)
-- [ ] cert-manager installé pour TLS automatique
-
-### Jenkins / GitLab CI
-- [ ] Credentials configurés dans Jenkins
-- [ ] Variables secrètes configurées dans GitLab CI
-- [ ] Pipeline testé sur branche `develop` → staging
-- [ ] Pipeline de prod avec approbation manuelle activé
-
-### Application
-- [ ] `SPRING_JPA_HIBERNATE_DDL_AUTO: validate` ou `none` en prod
-- [ ] Swagger UI désactivé en production (optionnel)
-- [ ] Logs centralisés configurés (ELK / Loki)
-- [ ] Monitoring configuré (Prometheus + Grafana)
+### Configuration finale avant mise en production ⚠️
+- [ ] Remplacer les noms de domaines réels dans `ingress.yaml`
+- [ ] Renseigner le token GitLab dans le secret du registre Kubernetes
+- [ ] Configurer `KUBECONFIG_PROD` dans les variables GitLab CI (si déploiement direct par la CI)

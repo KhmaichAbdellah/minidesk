@@ -7,9 +7,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   Button, Chip, TextField, MenuItem, Stack, IconButton, TablePagination, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Alert, Tooltip, List, ListItem, InputAdornment
+  Dialog, DialogTitle, DialogContent, DialogActions, Alert, Tooltip, List, ListItem, InputAdornment,
+  Avatar, Tabs, Tab
 } from '@mui/material';
-import { getAllTickets, createTicket, updateTicket, deleteTicket } from '../service/ticketService';
+import { getAllTickets, createTicket, updateTicket, deleteTicket, getTicketComments, addTicketComment, getTicketHistory } from '../service/ticketService';
 import { getAllUsers } from '../service/userService';
 import { getAiSessionByTicketId } from '../service/aiService';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +18,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 
@@ -89,6 +92,51 @@ const Tickets = () => {
   const [selectedTicketForHistory, setSelectedTicketForHistory] = useState(null);
   const [historySession, setHistorySession] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Modale Détails, Commentaires & Timeline Statuts
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [detailTicket, setDetailTicket] = useState(null);
+  const [detailComments, setDetailComments] = useState([]);
+  const [detailHistory, setDetailHistory] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState(0); // 0 = Commentaires, 1 = Historique statuts
+  const [newComment, setNewComment] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+
+  const handleOpenDetailModal = async (ticket) => {
+    setDetailTicket(ticket);
+    setOpenDetailModal(true);
+    setDetailLoading(true);
+    setDetailTab(0);
+    setNewComment('');
+    try {
+      const [commentsData, historyData] = await Promise.all([
+        getTicketComments(ticket.id),
+        getTicketHistory(ticket.id),
+      ]);
+      setDetailComments(commentsData || []);
+      setDetailHistory(historyData || []);
+    } catch (err) {
+      console.error('Erreur chargement détails ticket:', err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !detailTicket) return;
+    setCommentSubmitting(true);
+    try {
+      const created = await addTicketComment(detailTicket.id, newComment.trim());
+      setDetailComments((prev) => [...prev, created]);
+      setNewComment('');
+    } catch (err) {
+      console.error('Erreur envoi commentaire:', err);
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
 
   // Formulaire
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -462,6 +510,21 @@ const Tickets = () => {
                           </IconButton>
                         </Tooltip>
 
+                        <Tooltip title="Commentaires & Évolution">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenDetailModal(ticket)}
+                            sx={{
+                              color: '#2563eb',
+                              bgcolor: 'rgba(37, 99, 235, 0.08)',
+                              borderRadius: '10px',
+                              '&:hover': { bgcolor: 'rgba(37, 99, 235, 0.18)' },
+                            }}
+                          >
+                            <ForumOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
                         <Tooltip title="Modifier le ticket">
                           <IconButton
                             size="small"
@@ -728,6 +791,291 @@ const Tickets = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* ── Modale Détails, Commentaires & Historique des Statuts ── */}
+      <Dialog
+        open={openDetailModal}
+        onClose={() => setOpenDetailModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            boxShadow: '0 24px 60px rgba(48, 49, 103, 0.2)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, borderBottom: '1px solid rgba(48, 49, 103, 0.08)' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="caption" sx={{ color: '#FF067E', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Ticket #{detailTicket?.id} — {detailTicket?.category}
+              </Typography>
+              <Typography variant="h6" sx={{ color: '#303167', fontWeight: 900, mt: 0.3 }}>
+                {detailTicket?.title}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {detailTicket?.priority && (
+                <Chip
+                  size="small"
+                  label={detailTicket.priority}
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    bgcolor: PRIORITY_COLORS[detailTicket.priority]?.bg || '#f1f3fa',
+                    color: PRIORITY_COLORS[detailTicket.priority]?.color || '#303167',
+                    border: `1px solid ${PRIORITY_COLORS[detailTicket.priority]?.border || 'transparent'}`,
+                    borderRadius: '8px',
+                  }}
+                />
+              )}
+              {detailTicket?.status && (
+                <Chip
+                  size="small"
+                  label={STATUS_COLORS[detailTicket.status]?.label || detailTicket.status}
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    bgcolor: STATUS_COLORS[detailTicket.status]?.bg || '#f1f3fa',
+                    color: STATUS_COLORS[detailTicket.status]?.color || '#303167',
+                    border: `1px solid ${STATUS_COLORS[detailTicket.status]?.border || 'transparent'}`,
+                    borderRadius: '8px',
+                  }}
+                />
+              )}
+            </Stack>
+          </Stack>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
+          {/* Description du ticket */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              mb: 2.5,
+              bgcolor: '#f8f9fe',
+              borderRadius: '12px',
+              border: '1px solid rgba(48, 49, 103, 0.06)',
+            }}
+          >
+            <Typography variant="caption" sx={{ color: '#6b6b8a', fontWeight: 700, textTransform: 'uppercase' }}>
+              Description du problème
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#1a1a3a', mt: 0.5, whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+              {detailTicket?.description || 'Aucune description renseignée.'}
+            </Typography>
+            <Stack direction="row" spacing={3} sx={{ mt: 1.5, pt: 1.5, borderTop: '1px dashed rgba(48, 49, 103, 0.1)' }}>
+              <Typography variant="caption" sx={{ color: '#6b6b8a' }}>
+                Créé par : <strong style={{ color: '#303167' }}>{detailTicket?.createdByName || 'Inconnu'}</strong>
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#6b6b8a' }}>
+                Assigné à : <strong style={{ color: '#303167' }}>{detailTicket?.assignedToName || 'Non assigné'}</strong>
+              </Typography>
+            </Stack>
+          </Paper>
+
+          {/* Onglets Commentaires / Historique */}
+          <Tabs
+            value={detailTab}
+            onChange={(e, val) => setDetailTab(val)}
+            sx={{
+              borderBottom: '1px solid rgba(48, 49, 103, 0.08)',
+              mb: 2,
+              '& .MuiTab-root': { fontWeight: 800, textTransform: 'none', fontSize: '0.9rem' },
+              '& .Mui-selected': { color: '#FF067E' },
+              '& .MuiTabs-indicator': { backgroundColor: '#FF067E', height: 3, borderRadius: '3px' },
+            }}
+          >
+            <Tab label={`Commentaires (${detailComments.length})`} />
+            <Tab label={`Historique des statuts (${detailHistory.length})`} />
+          </Tabs>
+
+          {detailLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} sx={{ color: '#FF067E' }} />
+            </Box>
+          ) : detailTab === 0 ? (
+            /* Onglet 0 : Commentaires */
+            <Box>
+              <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1, mb: 2 }}>
+                {detailComments.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4, color: '#9899b5' }}>
+                    <ForumOutlinedIcon sx={{ fontSize: 40, opacity: 0.4, mb: 1 }} />
+                    <Typography variant="body2">Aucun commentaire pour l'instant. Soyez le premier à répondre !</Typography>
+                  </Box>
+                ) : (
+                  detailComments.map((comment) => (
+                    <Box
+                      key={comment.id}
+                      sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        mb: 2,
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          fontSize: '0.85rem',
+                          fontWeight: 800,
+                          bgcolor: comment.authorRole === 'ADMIN' ? '#303167' : comment.authorRole === 'TECHNICIAN' ? '#2563eb' : '#FF067E',
+                        }}
+                      >
+                        {comment.authorName ? comment.authorName.charAt(0).toUpperCase() : 'U'}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.4 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#303167' }}>
+                            {comment.authorName}
+                          </Typography>
+                          {comment.authorRole && (
+                            <Chip
+                              size="small"
+                              label={comment.authorRole}
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                bgcolor: comment.authorRole === 'ADMIN' ? 'rgba(48,49,103,0.1)' : comment.authorRole === 'TECHNICIAN' ? 'rgba(37,99,235,0.1)' : 'rgba(255,6,126,0.1)',
+                                color: comment.authorRole === 'ADMIN' ? '#303167' : comment.authorRole === 'TECHNICIAN' ? '#2563eb' : '#FF067E',
+                              }}
+                            />
+                          )}
+                          <Typography variant="caption" sx={{ color: '#9899b5' }}>
+                            {comment.createdAt ? new Date(comment.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                          </Typography>
+                        </Stack>
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            p: 1.5,
+                            bgcolor: '#f4f5fc',
+                            borderRadius: '12px',
+                            borderTopLeftRadius: '2px',
+                            color: '#1a1a3a',
+                            fontSize: '0.88rem',
+                            lineHeight: 1.5,
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
+                          {comment.content}
+                        </Paper>
+                      </Box>
+                    </Box>
+                  ))
+                )}
+              </Box>
+
+              {/* Formulaire d'ajout de commentaire */}
+              <Box component="form" onSubmit={handleAddComment}>
+                <Stack direction="row" spacing={1.5} alignItems="flex-end">
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    maxRows={4}
+                    placeholder="Écrire un message ou une précision..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#ffffff',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(48, 49, 103, 0.15)',
+                      },
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={commentSubmitting || !newComment.trim()}
+                    sx={{
+                      height: 48,
+                      px: 3,
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #FF067E 0%, #d4005f 100%)',
+                      boxShadow: '0 4px 15px rgba(255, 6, 126, 0.3)',
+                    }}
+                  >
+                    {commentSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon fontSize="small" />}
+                  </Button>
+                </Stack>
+              </Box>
+            </Box>
+          ) : (
+            /* Onglet 1 : Historique des statuts */
+            <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
+              {detailHistory.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4, color: '#9899b5' }}>
+                  <Typography variant="body2">Aucun changement de statut enregistré pour le moment.</Typography>
+                </Box>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {detailHistory.map((item, idx) => (
+                    <ListItem
+                      key={item.id || idx}
+                      sx={{
+                        p: 1.5,
+                        mb: 1.5,
+                        bgcolor: '#fafbff',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(48, 49, 103, 0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FF067E' }} />
+                        <Chip
+                          size="small"
+                          label={STATUS_COLORS[item.oldStatus]?.label || item.oldStatus}
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            bgcolor: STATUS_COLORS[item.oldStatus]?.bg || '#eee',
+                            color: STATUS_COLORS[item.oldStatus]?.color || '#555',
+                          }}
+                        />
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#6b6b8a' }}>→</Typography>
+                        <Chip
+                          size="small"
+                          label={STATUS_COLORS[item.newStatus]?.label || item.newStatus}
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            bgcolor: STATUS_COLORS[item.newStatus]?.bg || '#eee',
+                            color: STATUS_COLORS[item.newStatus]?.color || '#555',
+                          }}
+                        />
+                      </Stack>
+                      <Stack alignItems="flex-end">
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#303167' }}>
+                          Par {item.changedByName || 'Utilisateur'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#9899b5', fontSize: '0.7rem' }}>
+                          {item.changedAt ? new Date(item.changedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                        </Typography>
+                      </Stack>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(48, 49, 103, 0.08)' }}>
+          <Button onClick={() => setOpenDetailModal(false)} sx={{ fontWeight: 700, color: '#303167' }}>
+            Fermer
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

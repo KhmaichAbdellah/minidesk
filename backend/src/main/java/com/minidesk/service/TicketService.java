@@ -59,4 +59,12 @@ public interface TicketService {
      * @return Map<String, Object> avec les données du dashboard
      */
     Map<String, Object> getDashboardStats(User currentUser);
+
+    /**
+     * Récupérer l'historique des changements de statut pour un ticket.
+     * @param id - ID du ticket
+     * @param currentUser - Utilisateur connecté
+     * @return Liste ordonnée chronologiquement des transitions de statut
+     */
+    List<com.minidesk.dto.response.StatutLogResponse> getTicketHistory(Long id, User currentUser);
 }

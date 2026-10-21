@@ -298,4 +298,31 @@ public class TicketServiceImpl implements TicketService {
 
         return stats;
     }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<com.minidesk.dto.response.StatutLogResponse> getTicketHistory(Long id, User currentUser) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket introuvable avec l'id : " + id));
+
+        if (currentUser.getRole() == Role.USER) {
+            boolean isAuthor = ticket.getCreatedBy() != null && ticket.getCreatedBy().getId().equals(currentUser.getId());
+            if (!isAuthor) {
+                throw new AccessDeniedException("Accès refusé : vous n'êtes pas l'auteur de ce ticket.");
+            }
+        }
+
+        return statusLogRepository.findByTicketIdOrderByChangedAtAsc(id).stream()
+                .map(log -> com.minidesk.dto.response.StatutLogResponse.builder()
+                        .id(log.getId())
+                        .ticketId(log.getTicket().getId())
+                        .oldStatus(log.getOldStatus())
+                        .newStatus(log.getNewStatus())
+                        .changedById(log.getChangedBy() != null ? log.getChangedBy().getId() : null)
+                        .changedByName(log.getChangedBy() != null ? log.getChangedBy().getName() : "Inconnu")
+                        .changedByEmail(log.getChangedBy() != null ? log.getChangedBy().getEmail() : null)
+                        .changedAt(log.getChangedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
 }

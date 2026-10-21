@@ -39,6 +39,38 @@ import java.util.Map;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final com.minidesk.service.CommentService commentService;
+
+    // ── GET /api/tickets/{id}/comments ─────────────────────────────────────────
+    @Operation(summary = "Lister les commentaires d'un ticket",
+        description = "Retourne tous les commentaires déposés sur un ticket dans l'ordre chronologique.")
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<com.minidesk.dto.response.CommentResponse>> getComments(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(commentService.getCommentsByTicket(id, currentUser));
+    }
+
+    // ── POST /api/tickets/{id}/comments ────────────────────────────────────────
+    @Operation(summary = "Ajouter un commentaire à un ticket",
+        description = "Ajoute un nouveau message/commentaire au ticket spécifié.")
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<com.minidesk.dto.response.CommentResponse> addComment(
+            @PathVariable Long id,
+            @Valid @RequestBody com.minidesk.dto.request.CommentRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(commentService.addComment(id, request, currentUser));
+    }
+
+    // ── GET /api/tickets/{id}/history ─────────────────────────────────────────
+    @Operation(summary = "Obtenir l'historique des statuts d'un ticket",
+        description = "Retourne la liste chronologique de toutes les transitions de statut subies par le ticket (StatutLog).")
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<com.minidesk.dto.response.StatutLogResponse>> getTicketHistory(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(ticketService.getTicketHistory(id, currentUser));
+    }
 
     // ── GET /api/tickets ───────────────────────────────────────────────────────
     @Operation(summary = "Lister les tickets",
