@@ -1,0 +1,183 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/backend.yaml — Deployment Spring Boot Backend
+# ═══════════════════════════════════════════════════════════════════════════════
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minidesk-backend
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: backend
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+spec:
+  replicas: 2  # Haute disponibilité : 2 répliques minimum
+  selector:
+    matchLabels:
+      app: minidesk
+      component: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero-downtime deployment
+  template:
+    metadata:
+      labels:
+        app: minidesk
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      # Secret pour tirer l'image depuis GitLab Registry
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+
+      containers:
+        - name: backend
+          # ← IMAGE_TAG sera remplacé par Jenkins ou GitLab CI lors du déploiement
+          image: registry.gitlab.com/KhmaichAbdellah/minidesk/backend:IMAGE_TAG
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+              name: http
+
+          # Variables non-sensibles depuis ConfigMap
+          envFrom:
+            - configMapRef:
+                name: minidesk-config
+
+          # Variables sensibles depuis Secret
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: db-password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: jwt-secret
+            - name: SPRING_MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: mail-username
+            - name: SPRING_MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: mail-password
+            - name: APP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: admin-password
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: openai-api-key
+                  optional: true
+
+          # Limites de ressources
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          # Probe de démarrage (attend que Spring Boot soit prêt)
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            failureThreshold: 30
+            periodSeconds: 10
+
+          # Liveness probe
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Readiness probe
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+      # Distribuer les pods sur différents nœuds
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: minidesk
+                    component: backend
+                topologyKey: kubernetes.io/hostname
+
+---
+# ── Service Backend ────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: minidesk-backend
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: backend
+spec:
+  selector:
+    app: minidesk
+    component: backend
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP
+
+---
+# ── HorizontalPodAutoscaler ────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: minidesk-backend-hpa
+  namespace: minidesk-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: minidesk-backend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

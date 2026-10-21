@@ -1,0 +1,10 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/namespace.yaml — Namespace de production MiniDesk
+# ═══════════════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minidesk-prod
+  labels:
+    app: minidesk
+    env: production

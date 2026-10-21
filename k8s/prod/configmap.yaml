@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/configmap.yaml — Configuration non-sensible de MiniDesk
+# ═══════════════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minidesk-config
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    env: production
+data:
+  # Spring Boot
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://minidesk-postgres:5432/minideskdb"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+
+  # Serveur
+  SERVER_PORT: "8081"
+
+  # Email SMTP
+  SPRING_MAIL_HOST: "smtp.gmail.com"
+  SPRING_MAIL_PORT: "587"
+
+  # JWT
+  JWT_EXPIRATION: "86400000"
+
+  # Admin par défaut
+  APP_ADMIN_CREATE: "true"
+  APP_ADMIN_NAME: "Admin MiniDesk"
+  APP_ADMIN_EMAIL: "admin@minidesk.com"
+
+  # Moteur LLM (Option Cloud : OpenAI)
+  LLM_PROVIDER: "openai"
+  OPENAI_MODEL: "gpt-4o-mini"
+  LLM_MOCK: "false"
+  LLM_MAX_NEW_TOKENS: "512"
+  LLM_TEMPERATURE: "0.3"
+  LLM_TOP_P: "0.9"
+  LLM_TOP_K: "40"
+
+  # Ollama fallback (optionnel si déploiement local)
+  OLLAMA_ENDPOINT: "http://minidesk-ollama:11434/api/chat"
+  OLLAMA_MODEL: "phi3:mini"
+
+  # Frontend
+  VITE_API_URL: "http://minidesk-backend:8081"

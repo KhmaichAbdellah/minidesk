@@ -1,22 +1,47 @@
-# Java
+# Java / Maven
 **/target/
 *.class
-*.log
 
-# IntelliJ
+# JVM Crash Dumps (hot-spot logs)
+hs_err_pid*.log
+replay_pid*.log
+
+# IntelliJ IDEA
 .idea/
 *.iml
 
-# React
+# VS Code
+.vscode/
+
+# React / Node
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
+**/package-lock.json
 
-# Environment
+# Environment & Secrets (NE JAMAIS COMMITER !)
 .env
+.env.*
+!.env.example
 
-# Docker
+# Docker volumes locaux
 postgres_data/
+grafana_data/
+prometheus_data/
+ollama_data/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Kubeconfig (ne jamais commiter !)
+kubeconfig
+kubeconfig.yaml
+*.kubeconfig
+
+# Logs
+*.log
+logs/
+
+# Jenkins
+.jenkins/

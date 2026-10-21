@@ -33,10 +33,7 @@ public class KnowledgeArticle {
     private TicketCategory category;
 
     @ElementCollection
-    @CollectionTable(
-            name = "article_keywords",
-            joinColumns = @JoinColumn(name = "article_id")
-    )
+    @CollectionTable(name = "article_keywords", joinColumns = @JoinColumn(name = "article_id"))
 
     @Column(name = "keyword")
     @Builder.Default
