@@ -1,0 +1,60 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/ingress.yaml — Ingress Nginx pour exposer MiniDesk sur Internet
+# ═══════════════════════════════════════════════════════════════════════════════
+# Prérequis :
+#   - ingress-nginx controller installé dans le cluster
+#   - cert-manager installé pour le SSL/TLS automatique
+#   - Un nom de domaine pointant vers l'IP du LoadBalancer
+# ═══════════════════════════════════════════════════════════════════════════════
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minidesk-ingress
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+  annotations:
+    # Contrôleur Ingress
+    kubernetes.io/ingress.class: "nginx"
+    # SSL/TLS via cert-manager (Let's Encrypt)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Nginx options
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://minidesk.yourdomain.com"  # ← Adapter
+spec:
+  tls:
+    - hosts:
+        - minidesk.yourdomain.com          # ← Remplacer par votre domaine
+        - api.minidesk.yourdomain.com      # ← Remplacer par votre domaine API
+      secretName: minidesk-tls-secret
+  rules:
+    # ── Frontend ──────────────────────────────────────────────────────────────
+    - host: minidesk.yourdomain.com        # ← Remplacer par votre domaine
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minidesk-frontend
+                port:
+                  number: 80
+
+    # ── Backend API ───────────────────────────────────────────────────────────
+    - host: api.minidesk.yourdomain.com    # ← Remplacer par votre domaine API
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minidesk-backend
+                port:
+                  number: 8081
