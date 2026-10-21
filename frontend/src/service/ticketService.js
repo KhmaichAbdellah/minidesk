@@ -1,5 +1,5 @@
 // src/service/ticketService.js
-// Service de gestion des tickets (CRUD et Dashboard) via l'API backend.
+// Service de gestion des tickets (CRUD, Commentaires, Historique et Dashboard) via l'API backend.
 
 import api from './api';
 
@@ -51,3 +51,28 @@ export const deleteTicket = (id) =>
  */
 export const getDashboardStats = () =>
   api.get(`${TICKETS_URL}/stats`).then((res) => res.data);
+
+/**
+ * Récupérer la liste des commentaires déposés sur un ticket.
+ * @param {number} ticketId - ID du ticket
+ * @returns {Promise<Array>} Liste des commentaires ordonnés chronologiquement
+ */
+export const getTicketComments = (ticketId) =>
+  api.get(`${TICKETS_URL}/${ticketId}/comments`).then((res) => res.data);
+
+/**
+ * Ajouter un commentaire sur un ticket.
+ * @param {number} ticketId - ID du ticket
+ * @param {string} content - Texte du commentaire
+ * @returns {Promise<Object>} Le commentaire créé
+ */
+export const addTicketComment = (ticketId, content) =>
+  api.post(`${TICKETS_URL}/${ticketId}/comments`, { content }).then((res) => res.data);
+
+/**
+ * Récupérer l'historique chronologique des changements de statut d'un ticket.
+ * @param {number} ticketId - ID du ticket
+ * @returns {Promise<Array>} Liste des entrées d'audit StatutLog
+ */
+export const getTicketHistory = (ticketId) =>
+  api.get(`${TICKETS_URL}/${ticketId}/history`).then((res) => res.data);

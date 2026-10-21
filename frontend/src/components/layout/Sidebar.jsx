@@ -6,6 +6,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonIcon from '@mui/icons-material/Person';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import BoltIcon from '@mui/icons-material/Bolt';
 
 const Sidebar = () => {
@@ -120,6 +121,34 @@ const Sidebar = () => {
               <ConfirmationNumberIcon sx={{ fontSize: 21 }} />
             </ListItemIcon>
             <ListItemText primary="Tickets" primaryTypographyProps={{ fontWeight: 700, fontSize: '0.92rem' }} />
+          </ListItemButton>
+        </ListItem>
+
+        <ListItem disablePadding>
+          <ListItemButton
+            component={NavLink}
+            to="/knowledge"
+            sx={{
+              borderRadius: '12px',
+              py: 1.2,
+              px: 2,
+              transition: 'all 0.2s ease',
+              '&.active': {
+                background: 'linear-gradient(135deg, rgba(255, 6, 126, 0.2) 0%, rgba(255, 6, 126, 0.08) 100%)',
+                border: '1px solid rgba(255, 6, 126, 0.4)',
+                boxShadow: '0 4px 16px rgba(255, 6, 126, 0.25)',
+                '& .MuiListItemIcon-root': { color: '#FF067E' },
+                '& .MuiListItemText-primary': { color: '#ffffff', fontWeight: 800 },
+              },
+              '&:hover:not(.active)': {
+                bgcolor: 'rgba(255, 255, 255, 0.06)',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: 'rgba(255, 255, 255, 0.65)', minWidth: 38 }}>
+              <MenuBookIcon sx={{ fontSize: 21 }} />
+            </ListItemIcon>
+            <ListItemText primary="Base de connaissances" primaryTypographyProps={{ fontWeight: 700, fontSize: '0.92rem' }} />
           </ListItemButton>
         </ListItem>
 

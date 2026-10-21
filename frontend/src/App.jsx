@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Tickets   = lazy(() => import('./pages/Tickets'));
 const Users     = lazy(() => import('./pages/Users'));
 const Profile   = lazy(() => import('./pages/Profile'));
+const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
 
 const theme = createTheme({
   typography: {
@@ -153,6 +154,7 @@ function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="tickets" element={<Tickets />} />
+                <Route path="knowledge" element={<KnowledgeBase />} />
                 <Route path="profile" element={<Profile />} />
                 {/* Accès restreint aux ADMIN */}
                 <Route 
