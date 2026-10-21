@@ -2,6 +2,7 @@ package com.minidesk.config;
 
 import com.minidesk.service.llm.LlmClient;
 import com.minidesk.service.llm.LlmProperties;
+import com.minidesk.service.llm.MockLlmClient;
 import com.minidesk.service.llm.OllamaClient;
 import com.minidesk.service.llm.OpenAiClient;
 import lombok.extern.slf4j.Slf4j;
@@ -10,15 +11,15 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration du client LLM.
- * Sélectionne automatiquement OllamaClient ou OpenAiClient
- * selon la valeur de llm.provider dans application.yaml.
+ * Sélectionne automatiquement le bon client selon llm.provider et llm.mock.
  *
- * ┌─────────────────┬────────────────────────────────────┐
- * │ llm.provider    │ Client injecté                     │
- * ├─────────────────┼────────────────────────────────────┤
- * │ ollama (défaut) │ OllamaClient (LLM local)           │
- * │ openai          │ OpenAiClient (API GPT-4o)          │
- * └─────────────────┴────────────────────────────────────┘
+ * ┌──────────────────────┬────────────────────────────────────┐
+ * │ llm.mock / provider  │ Client injecté                     │
+ * ├──────────────────────┼────────────────────────────────────┤
+ * │ mock=true            │ MockLlmClient (simulation locale)  │
+ * │ provider=ollama      │ OllamaClient (LLM local)           │
+ * │ provider=openai      │ OpenAiClient (API GPT-4o)          │
+ * └──────────────────────┴────────────────────────────────────┘
  */
 @Configuration
 @Slf4j
@@ -27,9 +28,16 @@ public class LlmClientConfig {
     @Bean
     public LlmClient llmClient(
             LlmProperties llmProperties,
+            MockLlmClient mockLlmClient,
             OllamaClient ollamaClient,
             OpenAiClient openAiClient
     ) {
+        // ── Mode simulation : aucun LLM réel requis ──────────────────────────
+        if (llmProperties.isMock()) {
+            log.info("🤖 LLM Provider : Mock (simulation — LLM_MOCK=true)");
+            return mockLlmClient;
+        }
+
         String provider = llmProperties.getProvider();
 
         switch (provider.toLowerCase()) {
