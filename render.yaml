@@ -2,7 +2,7 @@
 # render.yaml — Blueprint MiniDesk pour Render.com
 # ============================================================
 # Services déployés :
-#   - minidesk-db       : PostgreSQL 16 (base de données)
+#   - minidesk-db       : PostgreSQL 16 (base de données managée)
 #   - minidesk-backend  : Spring Boot API (Java 21, port 8081)
 #   - minidesk-frontend : React + Nginx (port 80)
 # ============================================================
@@ -48,33 +48,33 @@ services:
       - key: JWT_EXPIRATION
         value: "86400000"
 
-      # Email SMTP (à remplir)
+      # Email SMTP (optionnel)
       - key: SPRING_MAIL_HOST
         value: smtp.gmail.com
       - key: SPRING_MAIL_PORT
         value: "587"
       - key: SPRING_MAIL_USERNAME
-        sync: false   # à renseigner dans le dashboard Render
+        value: ""
       - key: SPRING_MAIL_PASSWORD
-        sync: false   # à renseigner dans le dashboard Render
+        value: ""
 
       # Admin par défaut
       - key: APP_ADMIN_EMAIL
         value: admin@minidesk.com
       - key: APP_ADMIN_PASSWORD
-        sync: false   # à renseigner dans le dashboard Render
+        value: Admin@2026!
 
-      # LLM — mode mock par défaut (pas besoin de clé API)
+      # LLM — mode mock par défaut (fonctionne sans clé API)
       - key: LLM_PROVIDER
         value: mock
       - key: LLM_MOCK
         value: "true"
       - key: OPENAI_API_KEY
-        sync: false   # à renseigner si vous voulez OpenAI
+        value: ""
       - key: OPENAI_MODEL
         value: gpt-4o-mini
 
-      # Spring
+      # Spring & Server
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: SERVER_PORT
@@ -91,10 +91,9 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     envVars:
-      # URL publique du backend (sera l'URL Render du backend)
+      # URL publique du backend (injectée dynamiquement)
       - key: VITE_API_URL
         fromService:
-          name: minidesk-backend
           type: web
+          name: minidesk-backend
           property: host
-          envVarKey: VITE_API_URL

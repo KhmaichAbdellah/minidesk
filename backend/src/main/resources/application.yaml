@@ -88,3 +88,13 @@ springdoc:
     default-models-expand-depth: 2
   api-docs:
     path: /v3/api-docs
+
+# -- Endpoints Actuator / Health (Render / K8s / Docker) -------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
