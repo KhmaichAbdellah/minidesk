@@ -10,42 +10,100 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
+import java.net.URI;
 
 /**
  * Configuration automatique de la DataSource pour supporter les formats d'URL
  * de bases de données cloud (Render, Railway, Neon, Heroku, etc.).
  *
- * Normalise automatiquement 'postgres://' et 'postgresql://' en 'jdbc:postgresql://'
- * dès la liaison des propriétés pour éviter l'exception 'url must start with jdbc'.
+ * Extrait proprement les identifiants si l'URL est sous forme URI standard
+ * 'postgresql://user:password@host[:port]/database' pour générer une URL JDBC valide
+ * 'jdbc:postgresql://host:port/database' sans perturber le driver PostgreSQL.
  */
 @Configuration
 @Slf4j
 public class DatabaseConfig {
 
-    public static String normalizeJdbcUrl(String rawUrl) {
+    public record ConnectionInfo(String jdbcUrl, String username, String password) {}
+
+    public static ConnectionInfo parseConnectionInfo(String rawUrl, String fallbackUser, String fallbackPassword) {
         if (!StringUtils.hasText(rawUrl)) {
-            return rawUrl;
+            return new ConnectionInfo(rawUrl, fallbackUser, fallbackPassword);
         }
 
         String trimmed = rawUrl.trim();
 
-        if (trimmed.startsWith("jdbc:")) {
-            return trimmed;
+        // Format cloud contenant des identifiants (ex: postgresql://user:password@host/db)
+        if (trimmed.contains("@")) {
+            try {
+                String uriPart = trimmed;
+                if (uriPart.startsWith("jdbc:postgresql://")) {
+                    uriPart = uriPart.substring("jdbc:postgresql://".length());
+                } else if (uriPart.startsWith("jdbc:postgres://")) {
+                    uriPart = uriPart.substring("jdbc:postgres://".length());
+                } else if (uriPart.startsWith("postgresql://")) {
+                    uriPart = uriPart.substring("postgresql://".length());
+                } else if (uriPart.startsWith("postgres://")) {
+                    uriPart = uriPart.substring("postgres://".length());
+                }
+
+                URI uri = URI.create("http://" + uriPart);
+                String userInfo = uri.getUserInfo();
+                String host = uri.getHost();
+                int port = uri.getPort();
+                String path = uri.getPath();
+                String query = uri.getQuery();
+
+                String username = fallbackUser;
+                String password = fallbackPassword;
+
+                if (StringUtils.hasText(userInfo)) {
+                    if (userInfo.contains(":")) {
+                        String[] parts = userInfo.split(":", 2);
+                        if (!StringUtils.hasText(username)) username = parts[0];
+                        if (!StringUtils.hasText(password)) password = parts[1];
+                    } else {
+                        if (!StringUtils.hasText(username)) username = userInfo;
+                    }
+                }
+
+                StringBuilder jdbcUrl = new StringBuilder("jdbc:postgresql://");
+                jdbcUrl.append(host);
+                if (port > 0) {
+                    jdbcUrl.append(":").append(port);
+                } else {
+                    jdbcUrl.append(":5432");
+                }
+                if (StringUtils.hasText(path)) {
+                    jdbcUrl.append(path);
+                } else {
+                    jdbcUrl.append("/minideskdb");
+                }
+                if (StringUtils.hasText(query)) {
+                    jdbcUrl.append("?").append(query);
+                }
+
+                log.info("URL cloud détectée et convertie en JDBC standard : {}", jdbcUrl);
+                return new ConnectionInfo(jdbcUrl.toString(), username, password);
+
+            } catch (Exception e) {
+                log.warn("Erreur lors du parsing de l'URL cloud avec @, repli sur méthode simple : {}", e.getMessage());
+            }
         }
 
-        if (trimmed.startsWith("postgres://")) {
-            String converted = "jdbc:postgresql://" + trimmed.substring("postgres://".length());
-            log.info("Conversion URL DataSource (postgres:// -> jdbc:postgresql://)");
-            return converted;
+        // Format JDBC classique sans '@'
+        String jdbcUrl = trimmed;
+        if (!jdbcUrl.startsWith("jdbc:")) {
+            if (jdbcUrl.startsWith("postgres://")) {
+                jdbcUrl = "jdbc:postgresql://" + jdbcUrl.substring("postgres://".length());
+            } else if (jdbcUrl.startsWith("postgresql://")) {
+                jdbcUrl = "jdbc:postgresql://" + jdbcUrl.substring("postgresql://".length());
+            } else {
+                jdbcUrl = "jdbc:postgresql://" + jdbcUrl;
+            }
         }
 
-        if (trimmed.startsWith("postgresql://")) {
-            String converted = "jdbc:postgresql://" + trimmed.substring("postgresql://".length());
-            log.info("Conversion URL DataSource (postgresql:// -> jdbc:postgresql://)");
-            return converted;
-        }
-
-        return "jdbc:postgresql://" + trimmed;
+        return new ConnectionInfo(jdbcUrl, fallbackUser, fallbackPassword);
     }
 
     @Bean
@@ -55,12 +113,32 @@ public class DatabaseConfig {
         return new DataSourceProperties() {
             @Override
             public void setUrl(String url) {
-                super.setUrl(normalizeJdbcUrl(url));
+                ConnectionInfo info = parseConnectionInfo(url, getUsername(), getPassword());
+                super.setUrl(info.jdbcUrl());
+                if (StringUtils.hasText(info.username())) {
+                    super.setUsername(info.username());
+                }
+                if (StringUtils.hasText(info.password())) {
+                    super.setPassword(info.password());
+                }
             }
 
             @Override
             public String determineUrl() {
-                return normalizeJdbcUrl(super.determineUrl());
+                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), getUsername(), getPassword());
+                return info.jdbcUrl();
+            }
+
+            @Override
+            public String determineUsername() {
+                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), super.determineUsername(), getPassword());
+                return info.username();
+            }
+
+            @Override
+            public String determinePassword() {
+                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), getUsername(), super.determinePassword());
+                return info.password();
             }
 
             @Override
@@ -77,14 +155,15 @@ public class DatabaseConfig {
     @Bean
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
-        String finalUrl = normalizeJdbcUrl(properties.determineUrl());
-        log.info("Initialisation de la DataSource avec URL: {}", finalUrl);
+        ConnectionInfo info = parseConnectionInfo(properties.determineUrl(), properties.determineUsername(), properties.determinePassword());
+
+        log.info("Initialisation de la DataSource avec URL JDBC: {}, user: {}", info.jdbcUrl(), info.username());
 
         return DataSourceBuilder.create()
                 .driverClassName(properties.determineDriverClassName())
-                .url(finalUrl)
-                .username(properties.determineUsername())
-                .password(properties.determinePassword())
+                .url(info.jdbcUrl())
+                .username(info.username())
+                .password(info.password())
                 .build();
     }
 }
