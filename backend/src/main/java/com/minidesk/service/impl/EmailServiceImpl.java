@@ -4,12 +4,14 @@ import com.minidesk.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
@@ -25,9 +27,10 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(buildEmailBody(name, toEmail, password), true);
 
             mailSender.send(message);
+            log.info("Email de bienvenue envoyé avec succès à : {}", toEmail);
 
-        } catch (MessagingException e) {
-            throw new RuntimeException("Erreur lors de l'envoi de l'email : " + e.getMessage());
+        } catch (Exception e) {
+            log.warn("Impossible d'envoyer l'email de bienvenue à {} (SMTP non configuré ou inaccessible) : {}", toEmail, e.getMessage());
         }
     }
 
@@ -49,14 +52,15 @@ public class EmailServiceImpl implements EmailService {
                     </p>
                 </div>
 
-                <p style="color: #e67e22;">
-                    ⚠️ Pour des raisons de sécurité, veuillez changer votre mot de passe
-                    après votre première connexion.
+                <p style="color: #7f8c8d; font-size: 13px;">
+                    ⚠️ Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe
+                    dès votre première connexion.
                 </p>
 
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="color: #999; font-size: 12px;">
-                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+                <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
+
+                <p style="color: #95a5a6; font-size: 12px; text-align: center;">
+                    Cet email a été envoyé automatiquement par MiniDesk. Ne pas répondre.
                 </p>
             </div>
             """.formatted(name, email, password);

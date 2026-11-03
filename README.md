@@ -12,6 +12,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/KhmaichAbdellah/minidesk)
 
 </div>
 
@@ -443,3 +444,4 @@ Ce projet est sous licence **MIT** — voir le fichier [LICENSE](LICENSE) pour p
 Développé avec ❤️ par [KhmaichAbdellah](https://github.com/KhmaichAbdellah)
 
 </div>
+

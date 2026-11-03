@@ -5,9 +5,19 @@
 
 set -e
 
-# Remplacer le placeholder dans les fichiers JS buildés par Vite
 PLACEHOLDER="http://localhost:8081"
 RUNTIME_API_URL="${VITE_API_URL:-http://localhost:8081}"
+
+# Si l'URL fournie ne commence ni par http:// ni par https://, on ajoute https://
+if [ -n "$RUNTIME_API_URL" ] && [ "$RUNTIME_API_URL" != "$PLACEHOLDER" ]; then
+    case "$RUNTIME_API_URL" in
+        http://*|https://*) ;;
+        *) RUNTIME_API_URL="https://${RUNTIME_API_URL}" ;;
+    esac
+fi
+
+# Supprimer un éventuel slash final pour éviter //api/...
+RUNTIME_API_URL=$(echo "$RUNTIME_API_URL" | sed 's|/$||')
 
 echo "🔧 MiniDesk Frontend - Configuration de l'API URL: ${RUNTIME_API_URL}"
 
