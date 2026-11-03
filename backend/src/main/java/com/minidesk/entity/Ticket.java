@@ -5,7 +5,7 @@ import com.minidesk.enums.TicketCategory;
 import com.minidesk.enums.TicketStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import minidesk.enums.*;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -60,29 +60,16 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     @Builder.Default
-    @OneToMany(
-            mappedBy = "ticket",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(
-            mappedBy = "ticket",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StatutLog> statutLogs = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(
-            mappedBy = "ticket",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiSession> aiSessions = new ArrayList<>();
-
 
     @PrePersist
     public void prePersist() {

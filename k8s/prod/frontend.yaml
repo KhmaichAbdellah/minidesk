@@ -1,0 +1,118 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/frontend.yaml — Deployment React/Nginx Frontend
+# ═══════════════════════════════════════════════════════════════════════════════
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minidesk-frontend
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: minidesk
+      component: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: minidesk
+        component: frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+
+      containers:
+        - name: frontend
+          # ← IMAGE_TAG sera remplacé par Jenkins ou GitLab CI lors du déploiement
+          image: registry.gitlab.com/KhmaichAbdellah/minidesk/frontend:IMAGE_TAG
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: VITE_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: minidesk-config
+                  key: VITE_API_URL
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: minidesk
+                    component: frontend
+                topologyKey: kubernetes.io/hostname
+
+---
+# ── Service Frontend ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: minidesk-frontend
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: frontend
+spec:
+  selector:
+    app: minidesk
+    component: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# ── HorizontalPodAutoscaler Frontend ──────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: minidesk-frontend-hpa
+  namespace: minidesk-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: minidesk-frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

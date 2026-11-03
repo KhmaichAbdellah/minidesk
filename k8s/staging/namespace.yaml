@@ -1,0 +1,10 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/staging/namespace.yaml — Namespace staging MiniDesk
+# ═══════════════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minidesk-staging
+  labels:
+    app: minidesk
+    env: staging

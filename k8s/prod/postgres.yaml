@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/prod/postgres.yaml — StatefulSet PostgreSQL pour la production
+# ═══════════════════════════════════════════════════════════════════════════════
+---
+# ── PersistentVolumeClaim pour les données PostgreSQL ─────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard  # ← Adapter selon votre cluster (gp2, managed-premium, etc.)
+
+---
+# ── Deployment PostgreSQL ─────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minidesk-postgres
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minidesk
+      component: postgres
+  strategy:
+    type: Recreate  # Pour éviter les conflits sur le PVC
+  template:
+    metadata:
+      labels:
+        app: minidesk
+        component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: minideskdb
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minidesk-secrets
+                  key: db-password
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "minideskdb"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "minideskdb"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# ── Service PostgreSQL (interne uniquement) ───────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: minidesk-postgres
+  namespace: minidesk-prod
+  labels:
+    app: minidesk
+    component: postgres
+spec:
+  selector:
+    app: minidesk
+    component: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP

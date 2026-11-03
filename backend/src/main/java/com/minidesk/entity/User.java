@@ -43,31 +43,25 @@ public class User {
     @Column(nullable = false)
     private Boolean enabled = true;
 
-
     @Builder.Default // pour creer liste vide au lieu de null
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
     private List<Ticket> createdTickets = new ArrayList<>();
-
 
     @Builder.Default
     @OneToMany(mappedBy = "assignedTo")
     private List<Ticket> assignedTickets = new ArrayList<>();
 
-
     @Builder.Default
     @OneToMany(mappedBy = "changedBy", cascade = CascadeType.ALL)
     private List<StatutLog> statutLogs = new ArrayList<>();
-
 
     @Builder.Default
     @OneToMany(mappedBy = "author")
     private List<Comment> comments = new ArrayList<>();
 
-
     @Builder.Default
     @OneToMany(mappedBy = "author")
     private List<KnowledgeArticle> articles = new ArrayList<>();
-
 
     @Builder.Default
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)

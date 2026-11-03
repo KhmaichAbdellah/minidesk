@@ -1,27 +1,90 @@
+server:
+  port: ${SERVER_PORT:8081}
+
 spring:
+  # ── Nom de l'application Spring Boot ─────────────────────────────────────────
   application:
     name: minidesk
-  datasource:
-    url: jdbc:postgresql://localhost:5432/minideskdb
-    username: postgres
-    password: admin
 
+  # ── Configuration de la source de données PostgreSQL ─────────────────────────
+  datasource:
+    # En développement local : jdbc:postgresql://localhost:5432/minideskdb
+    # En Docker/Kubernetes : la variable SPRING_DATASOURCE_URL est injectée
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/minideskdb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+
+  # ── Configuration JPA / Hibernate ────────────────────────────────────────────
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+
+  # ── Configuration du service d'envoi d'email (SMTP Gmail) ────────────────────
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging:
   level:
-    org.springframework.security: DEBUG
+    org.springframework.security: WARN
 
+# ── Configuration du moteur LLM (IA) ─────────────────────────────────────────
+# En développement local  : LLM_PROVIDER=ollama dans .env
+# En production           : LLM_PROVIDER=openai dans .env
+llm:
+  provider: ${LLM_PROVIDER:openai}
+  mock: ${LLM_MOCK:false}
+  max-new-tokens: ${LLM_MAX_NEW_TOKENS:512}
+  temperature: ${LLM_TEMPERATURE:0.3}
+  top-p: ${LLM_TOP_P:0.9}
+  top-k: ${LLM_TOP_K:40}
 
+# ── Configuration OpenAI (API cloud) ─────────────────────────────────────────
+# Obtenir la clé sur : https://platform.openai.com/api-keys
+# Tarifs GPT-4o-mini : ~$0.15 / 1M tokens input (très bon rapport qualité/prix)
+openai:
+  api-key: ${OPENAI_API_KEY:}            # ← JAMAIS en dur ! Toujours via variable d'env
+  model: ${OPENAI_MODEL:gpt-4o-mini}    # Options : gpt-4o-mini | gpt-4o | gpt-3.5-turbo
+
+# ── Configuration Ollama (LLM local - développement uniquement) ───────────────
+# Utiliser en dev : définir LLM_PROVIDER=ollama dans .env
+ollama:
+  endpoint: ${OLLAMA_ENDPOINT:http://localhost:11434/api/chat}
+  model: ${OLLAMA_MODEL:phi3:mini}
+
+# ── Configuration JWT (JSON Web Token) ───────────────────────────────────────
 jwt:
-  secret: mySecretKeyForMiniDeskJwtAuthentication2026MySecretKey
-  expiration: 86400000 # 24 heures
+  # En développement, utiliser une clé par défaut (CHANGER EN PRODUCTION !)
+  # Générer avec : openssl rand -hex 64
+  secret: ${JWT_SECRET:mySecretKeyForMiniDeskJwtAuthentication2026MySecretKey}
+  expiration: ${JWT_EXPIRATION:86400000}
 
-spring.mail.host : smtp.gmail.com
-spring.mail.port : 587
-spring.mail.username : abdellahkhmich.12@gmail.com
-spring.mail.password : xxxx xxxx xxxx xxxx
-spring.mail.properties.mail.smtp.auth : true
-spring.mail.properties.mail.smtp.starttls.enable : true
+# ── Compte Administrateur par Défaut ─────────────────────────────────────────
+app:
+  admin:
+    create: ${APP_ADMIN_CREATE:true}
+    name: ${APP_ADMIN_NAME:Admin MiniDesk}
+    email: ${APP_ADMIN_EMAIL:admin@minidesk.com}
+    password: ${APP_ADMIN_PASSWORD:Admin@2026!}
+
+# ── Configuration SpringDoc / Swagger UI ─────────────────────────────────────
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    try-it-out-enabled: true
+    display-request-duration: true
+    default-models-expand-depth: 2
+  api-docs:
+    path: /v3/api-docs

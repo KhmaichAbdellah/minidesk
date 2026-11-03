@@ -1,0 +1,199 @@
+/* ============================================================
+   index.css – Système de design global MiniDesk
+   Inspiré du design Novelis.io :
+   - Palette indigo/rose/blanc
+   - Police Lato
+   - Pas d'arrondis sur les éléments principaux
+   - Flat design avec ombres très légères
+   ============================================================ */
+
+/* --- Variables CSS (Design Tokens) --- */
+:root {
+  /* Couleurs primaires */
+  --color-primary: #303167;        /* Indigo profond – Novelis signature */
+  --color-primary-dark: #202044;   /* Variante sombre */
+  --color-primary-light: #4a4baa; /* Variante claire */
+
+  /* Couleur secondaire / accent */
+  --color-secondary: #FF067E;      /* Rose magenta – CTA principal Novelis */
+  --color-secondary-hover: #d4005f;
+
+  /* Accents bleus */
+  --color-accent-blue: #4890ff;
+  --color-accent-blue-light: #7BAFFF;
+
+  /* Fonds */
+  --color-bg: #f7f6fb;             /* Fond général légèrement violet */
+  --color-bg-card: #ffffff;        /* Fond des cartes */
+  --color-bg-dark: #111123;        /* Footer / sections sombres */
+  --color-bg-sidebar: #202044;     /* Sidebar sombre */
+
+  /* Textes */
+  --color-text-primary: #1a1a3a;
+  --color-text-secondary: #6b6b8a;
+  --color-text-light: #ffffff;
+  --color-text-muted: #9899b5;
+
+  /* Bordures */
+  --color-border: rgba(48, 49, 103, 0.10);
+  --color-border-hover: rgba(48, 49, 103, 0.25);
+
+  /* Statuts */
+  --color-success: #41CF7C;
+  --color-warning: #FEB32B;
+  --color-danger: #F25353;
+  --color-info: #4890ff;
+
+  /* Ombres (très légères, style Novelis) */
+  --shadow-sm: rgba(0, 0, 0, 0.06) 0px 0px 6px 0px;
+  --shadow-md: rgba(48, 49, 103, 0.08) 0px 4px 20px 0px;
+  --shadow-lg: rgba(48, 49, 103, 0.12) 0px 8px 40px 0px;
+  --shadow-pink: rgba(255, 6, 126, 0.20) 0px 8px 30px 0px;
+
+  /* Pas d'arrondis (signature Novelis) */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;  /* utilisé avec parcimonie pour les tags/badges */
+
+  /* Espacement */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 40px;
+
+  /* Typographie */
+  --font-family: 'Lato', sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 26px;
+  --font-size-2xl: 34px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+
+  /* Largeur de la sidebar */
+  --sidebar-width: 250px;
+  --navbar-height: 68px;
+}
+
+/* --- Reset & Base --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color var(--transition-fast);
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-family);
+}
+
+/* --- Scrollbar personnalisée --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 0;
+}
+
+/* --- Utilitaires d'animation --- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-base) forwards;
+}
+
+/* --- Mise en page principale (App shell) --- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Zone de contenu à côté de la sidebar */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left var(--transition-base);
+}
+
+/* Zone de contenu en dessous de la navbar */
+.app-content {
+  flex: 1;
+  padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
+  padding-top: calc(var(--navbar-height) + var(--spacing-xl));
+}
+
+/* --- Skeleton loading --- */
+.skeleton {
+  background: linear-gradient(90deg, #ececf4 25%, #f5f5fb 50%, #ececf4 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

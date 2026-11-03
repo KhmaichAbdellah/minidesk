@@ -1,0 +1,158 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# .gitlab-ci.yml — Pipeline CI/CD GitLab pour MiniDesk
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ce fichier est une ALTERNATIVE au Jenkinsfile.
+# Utiliser l'un ou l'autre selon votre infrastructure :
+#   → GitLab CI : ce fichier (.gitlab-ci.yml)
+#   → Jenkins   : le fichier Jenkinsfile à la racine
+# ═══════════════════════════════════════════════════════════════════════════════
+
+image: docker:27
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY: $CI_REGISTRY
+  IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
+  IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+services:
+  - docker:27-dind
+
+stages:
+  - test
+  - build
+  - push
+  - deploy-staging
+  - deploy-prod
+
+# ── Cache global ──────────────────────────────────────────────────────────────
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - backend/.m2/
+    - frontend/node_modules/
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE : test
+# ══════════════════════════════════════════════════════════════════════════════
+
+test:backend:
+  stage: test
+  image: maven:3.9.9-eclipse-temurin-21
+  script:
+    - cd backend
+    - mvn test -B -Dmaven.repo.local=.m2/repository
+  artifacts:
+    reports:
+      junit: backend/target/surefire-reports/TEST-*.xml
+    expire_in: 7 days
+
+test:frontend:lint:
+  stage: test
+  image: node:22-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE : build (Docker images)
+# ══════════════════════════════════════════════════════════════════════════════
+
+build:backend:
+  stage: build
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker pull $IMAGE_BACKEND:latest || true
+    - docker build \
+        --cache-from $IMAGE_BACKEND:latest \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t $IMAGE_BACKEND:$IMAGE_TAG \
+        -t $IMAGE_BACKEND:latest \
+        ./backend
+  only:
+    - main
+    - develop
+    - /^release\/.*/
+
+build:frontend:
+  stage: build
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker pull $IMAGE_FRONTEND:latest || true
+    - docker build \
+        --cache-from $IMAGE_FRONTEND:latest \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t $IMAGE_FRONTEND:$IMAGE_TAG \
+        -t $IMAGE_FRONTEND:latest \
+        ./frontend
+  only:
+    - main
+    - develop
+    - /^release\/.*/
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE : push vers GitLab Container Registry
+# ══════════════════════════════════════════════════════════════════════════════
+
+push:images:
+  stage: push
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker push $IMAGE_BACKEND:$IMAGE_TAG
+    - docker push $IMAGE_BACKEND:latest
+    - docker push $IMAGE_FRONTEND:$IMAGE_TAG
+    - docker push $IMAGE_FRONTEND:latest
+  only:
+    - main
+    - develop
+    - /^release\/.*/
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE : Deploy Staging (branche develop)
+# ══════════════════════════════════════════════════════════════════════════════
+
+deploy:staging:
+  stage: deploy-staging
+  image: bitnami/kubectl:latest
+  environment:
+    name: staging
+    url: http://staging.minidesk.yourdomain.com
+  before_script:
+    - echo "$KUBECONFIG_STAGING" > /tmp/kubeconfig
+    - export KUBECONFIG=/tmp/kubeconfig
+  script:
+    - sed -i "s|IMAGE_TAG|$IMAGE_TAG|g" k8s/staging/*.yaml
+    - kubectl apply -f k8s/staging/ --namespace=minidesk-staging
+    - kubectl rollout status deployment/minidesk-backend -n minidesk-staging --timeout=120s
+    - kubectl rollout status deployment/minidesk-frontend -n minidesk-staging --timeout=120s
+  only:
+    - develop
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE : Deploy Production (branche main, approbation manuelle)
+# ══════════════════════════════════════════════════════════════════════════════
+
+deploy:production:
+  stage: deploy-prod
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+    url: https://minidesk.yourdomain.com
+  when: manual  # ← Approbation manuelle requise dans GitLab
+  allow_failure: false
+  before_script:
+    - echo "$KUBECONFIG_PROD" > /tmp/kubeconfig
+    - export KUBECONFIG=/tmp/kubeconfig
+  script:
+    - sed -i "s|IMAGE_TAG|$IMAGE_TAG|g" k8s/prod/*.yaml
+    - kubectl apply -f k8s/prod/ --namespace=minidesk-prod
+    - kubectl rollout status deployment/minidesk-backend -n minidesk-prod --timeout=180s
+    - kubectl rollout status deployment/minidesk-frontend -n minidesk-prod --timeout=180s
+  only:
+    - main
