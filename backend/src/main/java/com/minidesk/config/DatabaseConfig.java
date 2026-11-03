@@ -3,6 +3,7 @@ package com.minidesk.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -14,11 +15,38 @@ import javax.sql.DataSource;
  * Configuration automatique de la DataSource pour supporter les formats d'URL
  * de bases de données cloud (Render, Railway, Neon, Heroku, etc.).
  *
- * Convertit automatiquement les schémas 'postgres://' et 'postgresql://' en 'jdbc:postgresql://'.
+ * Normalise automatiquement 'postgres://' et 'postgresql://' en 'jdbc:postgresql://'
+ * dès la liaison des propriétés pour éviter l'exception 'url must start with jdbc'.
  */
 @Configuration
 @Slf4j
 public class DatabaseConfig {
+
+    public static String normalizeJdbcUrl(String rawUrl) {
+        if (!StringUtils.hasText(rawUrl)) {
+            return rawUrl;
+        }
+
+        String trimmed = rawUrl.trim();
+
+        if (trimmed.startsWith("jdbc:")) {
+            return trimmed;
+        }
+
+        if (trimmed.startsWith("postgres://")) {
+            String converted = "jdbc:postgresql://" + trimmed.substring("postgres://".length());
+            log.info("Conversion URL DataSource (postgres:// -> jdbc:postgresql://)");
+            return converted;
+        }
+
+        if (trimmed.startsWith("postgresql://")) {
+            String converted = "jdbc:postgresql://" + trimmed.substring("postgresql://".length());
+            log.info("Conversion URL DataSource (postgresql:// -> jdbc:postgresql://)");
+            return converted;
+        }
+
+        return "jdbc:postgresql://" + trimmed;
+    }
 
     @Bean
     @Primary
@@ -26,26 +54,22 @@ public class DatabaseConfig {
     public DataSourceProperties dataSourceProperties() {
         return new DataSourceProperties() {
             @Override
+            public void setUrl(String url) {
+                super.setUrl(normalizeJdbcUrl(url));
+            }
+
+            @Override
             public String determineUrl() {
-                String rawUrl = super.determineUrl();
-                if (!StringUtils.hasText(rawUrl)) {
-                    return rawUrl;
-                }
+                return normalizeJdbcUrl(super.determineUrl());
+            }
 
-                // Normalisation Render / Railway / Supabase
-                if (rawUrl.startsWith("postgres://")) {
-                    String jdbcUrl = "jdbc:postgresql://" + rawUrl.substring("postgres://".length());
-                    log.info("Conversion de l'URL DataSource (postgres:// -> jdbc:postgresql://)");
-                    return jdbcUrl;
+            @Override
+            public String determineDriverClassName() {
+                String existing = super.getDriverClassName();
+                if (StringUtils.hasText(existing)) {
+                    return existing;
                 }
-
-                if (rawUrl.startsWith("postgresql://") && !rawUrl.startsWith("jdbc:postgresql://")) {
-                    String jdbcUrl = "jdbc:postgresql://" + rawUrl.substring("postgresql://".length());
-                    log.info("Conversion de l'URL DataSource (postgresql:// -> jdbc:postgresql://)");
-                    return jdbcUrl;
-                }
-
-                return rawUrl;
+                return "org.postgresql.Driver";
             }
         };
     }
@@ -53,6 +77,14 @@ public class DatabaseConfig {
     @Bean
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
-        return properties.initializeDataSourceBuilder().build();
+        String finalUrl = normalizeJdbcUrl(properties.determineUrl());
+        log.info("Initialisation de la DataSource avec URL: {}", finalUrl);
+
+        return DataSourceBuilder.create()
+                .driverClassName(properties.determineDriverClassName())
+                .url(finalUrl)
+                .username(properties.determineUsername())
+                .password(properties.determinePassword())
+                .build();
     }
 }
