@@ -10,7 +10,7 @@
 databases:
   - name: minidesk-db
     databaseName: minideskdb
-    user: postgres
+    user: minidesk_user
     plan: free
     region: frankfurt
 
