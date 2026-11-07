@@ -20,6 +20,8 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
+    # Désactive le proxy de vue JPA (open-in-view) — améliore les perfs en prod
+    open-in-view: false
 
   # ── Configuration du service d'envoi d'email (SMTP Gmail) ────────────────────
   mail:
@@ -99,3 +101,7 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  # Désactive le health check mail (évite le DOWN si SMTP non configuré)
+  health:
+    mail:
+      enabled: false
