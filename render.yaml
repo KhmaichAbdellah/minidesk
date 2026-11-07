@@ -5,6 +5,8 @@
 #   - minidesk-db       : PostgreSQL 16 (base de données managée)
 #   - minidesk-backend  : Spring Boot API (Java 21, port 8081)
 #   - minidesk-frontend : React + Nginx (port 80)
+#
+# Pour déployer : Render Dashboard → Blueprints → New Blueprint
 # ============================================================
 
 databases:
@@ -29,26 +31,18 @@ services:
     healthCheckPath: /actuator/health
     envVars:
       # Base de données (injectée automatiquement depuis minidesk-db)
-      - key: SPRING_DATASOURCE_URL
+      - key: DATABASE_URL
         fromDatabase:
           name: minidesk-db
           property: connectionString
-      - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: minidesk-db
-          property: user
-      - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: minidesk-db
-          property: password
 
-      # JWT
+      # JWT (clé auto-générée par Render — sécurisé)
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
         value: "86400000"
 
-      # Email SMTP (optionnel)
+      # Email SMTP Gmail (optionnel — laisser vide si non utilisé)
       - key: SPRING_MAIL_HOST
         value: smtp.gmail.com
       - key: SPRING_MAIL_PORT
@@ -58,27 +52,27 @@ services:
       - key: SPRING_MAIL_PASSWORD
         value: ""
 
-      # Admin par défaut
+      # Compte administrateur par défaut
       - key: APP_ADMIN_EMAIL
         value: admin@minidesk.com
       - key: APP_ADMIN_PASSWORD
         value: Admin@2026!
 
-      # LLM — mode mock par défaut (fonctionne sans clé API)
-      - key: LLM_PROVIDER
-        value: mock
+      # LLM — mode mock par défaut (fonctionne sans clé OpenAI)
       - key: LLM_MOCK
         value: "true"
+      - key: LLM_PROVIDER
+        value: mock
       - key: OPENAI_API_KEY
         value: ""
       - key: OPENAI_MODEL
         value: gpt-4o-mini
 
-      # Spring & Server
+      # Spring Boot
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-      - key: SERVER_PORT
-        value: "8081"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
 
   # ──────────────────────────────────────────────────────────
   # Frontend React + Nginx
@@ -90,8 +84,9 @@ services:
     plan: free
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
+    healthCheckPath: /health
     envVars:
-      # URL publique du backend (injectée dynamiquement)
+      # URL publique du backend — injectée automatiquement
       - key: VITE_API_URL
         fromService:
           type: web
