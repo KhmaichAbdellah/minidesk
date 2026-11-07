@@ -7,13 +7,14 @@ import {
   Button, Chip, TextField, Stack, IconButton, TablePagination, CircularProgress, MenuItem, Switch,
   Dialog, DialogTitle, DialogContent, DialogActions, Alert, InputAdornment, Tooltip
 } from '@mui/material';
-import { getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus } from '../service/userService';
+import { getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus, resetUserPassword } from '../service/userService';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PeopleIcon from '@mui/icons-material/People';
+import KeyIcon from '@mui/icons-material/Key';
 
 const ROLE_STYLES = {
   ADMIN: { bg: 'rgba(255, 6, 126, 0.12)', color: '#FF067E', border: 'rgba(255, 6, 126, 0.3)' },
@@ -127,6 +128,17 @@ const Users = () => {
       fetchUsers();
     } catch (err) {
       console.error("Erreur toggle status:", err);
+    }
+  };
+
+  const handleResetPassword = async (user) => {
+    if (window.confirm(`Générer un nouveau mot de passe pour ${user.name || user.email} ?`)) {
+      try {
+        const res = await resetUserPassword(user.id);
+        alert(`Nouveau mot de passe pour ${user.email} :\n\n${res.temporaryPassword}\n\nNotez-le et transmettez-le à l'utilisateur.`);
+      } catch (err) {
+        console.error("Erreur réinitialisation mot de passe:", err);
+      }
     }
   };
 
@@ -319,6 +331,20 @@ const Users = () => {
                     </TableCell>
                     <TableCell align="right" sx={{ pr: 2 }}>
                       <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Réinitialiser le mot de passe">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleResetPassword(u)}
+                            sx={{
+                              color: '#ea580c',
+                              bgcolor: 'rgba(234, 88, 12, 0.08)',
+                              borderRadius: '10px',
+                              '&:hover': { bgcolor: 'rgba(234, 88, 12, 0.18)' },
+                            }}
+                          >
+                            <KeyIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Modifier">
                           <IconButton
                             size="small"

@@ -30,7 +30,7 @@ public class EmailServiceImpl implements EmailService {
             log.info("Email de bienvenue envoyé avec succès à : {}", toEmail);
 
         } catch (Exception e) {
-            log.warn("Impossible d'envoyer l'email de bienvenue à {} (SMTP non configuré ou inaccessible) : {}", toEmail, e.getMessage());
+            log.warn("Impossible d'envoyer l'email de bienvenue à {} (SMTP non configuré ou inaccessible) : {}. Mot de passe généré : {}", toEmail, e.getMessage(), password);
         }
     }
 

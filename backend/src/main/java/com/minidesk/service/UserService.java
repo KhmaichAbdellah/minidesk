@@ -34,4 +34,7 @@ public interface UserService {
 
     /** Changer le mot de passe de l'utilisateur connecté. */
     void changePassword(Long id, String currentPassword, String newPassword);
+
+    /** Réinitialiser le mot de passe d'un utilisateur et retourner le nouveau mot de passe généré. */
+    String resetPassword(Long id);
 }
