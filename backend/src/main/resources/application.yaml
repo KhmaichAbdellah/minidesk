@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${PORT:${SERVER_PORT:8081}}
 
 spring:
   # ── Nom de l'application Spring Boot ─────────────────────────────────────────
@@ -8,9 +8,10 @@ spring:
 
   # ── Configuration de la source de données PostgreSQL ─────────────────────────
   datasource:
-    # En développement local : jdbc:postgresql://localhost:5432/minideskdb
-    # En Docker/Kubernetes : la variable SPRING_DATASOURCE_URL est injectée
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/minideskdb}
+    # Développement local   : jdbc:postgresql://localhost:5432/minideskdb
+    # Render (DATABASE_URL) : postgresql://user:pass@host/db  → converti automatiquement
+    # Docker/K8s            : SPRING_DATASOURCE_URL injectée
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/minideskdb}}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:admin}
 

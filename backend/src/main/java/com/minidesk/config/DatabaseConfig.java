@@ -1,9 +1,8 @@
 package com.minidesk.config;
 
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -13,12 +12,14 @@ import javax.sql.DataSource;
 import java.net.URI;
 
 /**
- * Configuration automatique de la DataSource pour supporter les formats d'URL
- * de bases de données cloud (Render, Railway, Neon, Heroku, etc.).
+ * Configuration de la DataSource pour supporter les formats d'URL cloud
+ * (Render, Railway, Neon, Heroku, etc.).
  *
- * Extrait proprement les identifiants si l'URL est sous forme URI standard
- * 'postgresql://user:password@host[:port]/database' pour générer une URL JDBC valide
- * 'jdbc:postgresql://host:port/database' sans perturber le driver PostgreSQL.
+ * Convertit une URL de type 'postgresql://user:password@host/db' en URL JDBC valide
+ * 'jdbc:postgresql://host:5432/db' en extrayant les identifiants embarqués.
+ *
+ * Utilise une injection @Value directe pour éviter tout conflit avec le
+ * processus de validation d'URL de Spring Boot (DataSourceProperties.fromJdbcUrl).
  */
 @Configuration
 @Slf4j
@@ -26,6 +27,10 @@ public class DatabaseConfig {
 
     public record ConnectionInfo(String jdbcUrl, String username, String password) {}
 
+    /**
+     * Convertit une URL brute (format cloud ou JDBC) en ConnectionInfo normalisée.
+     * Supporte : postgresql://, postgres://, jdbc:postgresql://, jdbc:postgres://
+     */
     public static ConnectionInfo parseConnectionInfo(String rawUrl, String fallbackUser, String fallbackPassword) {
         if (!StringUtils.hasText(rawUrl)) {
             return new ConnectionInfo(rawUrl, fallbackUser, fallbackPassword);
@@ -33,7 +38,7 @@ public class DatabaseConfig {
 
         String trimmed = rawUrl.trim();
 
-        // Format cloud contenant des identifiants (ex: postgresql://user:password@host/db)
+        // Format cloud avec identifiants embarqués : postgresql://user:pass@host/db
         if (trimmed.contains("@")) {
             try {
                 String uriPart = trimmed;
@@ -49,10 +54,10 @@ public class DatabaseConfig {
 
                 URI uri = URI.create("http://" + uriPart);
                 String userInfo = uri.getUserInfo();
-                String host = uri.getHost();
-                int port = uri.getPort();
-                String path = uri.getPath();
-                String query = uri.getQuery();
+                String host     = uri.getHost();
+                int    port     = uri.getPort();
+                String path     = uri.getPath();
+                String query    = uri.getQuery();
 
                 String username = fallbackUser;
                 String password = fallbackPassword;
@@ -69,29 +74,21 @@ public class DatabaseConfig {
 
                 StringBuilder jdbcUrl = new StringBuilder("jdbc:postgresql://");
                 jdbcUrl.append(host);
-                if (port > 0) {
-                    jdbcUrl.append(":").append(port);
-                } else {
-                    jdbcUrl.append(":5432");
-                }
-                if (StringUtils.hasText(path)) {
-                    jdbcUrl.append(path);
-                } else {
-                    jdbcUrl.append("/minideskdb");
-                }
+                jdbcUrl.append(":").append(port > 0 ? port : 5432);
+                jdbcUrl.append(StringUtils.hasText(path) ? path : "/minideskdb");
                 if (StringUtils.hasText(query)) {
                     jdbcUrl.append("?").append(query);
                 }
 
-                log.info("URL cloud détectée et convertie en JDBC standard : {}", jdbcUrl);
+                log.info("URL cloud convertie → JDBC : {}", jdbcUrl);
                 return new ConnectionInfo(jdbcUrl.toString(), username, password);
 
             } catch (Exception e) {
-                log.warn("Erreur lors du parsing de l'URL cloud avec @, repli sur méthode simple : {}", e.getMessage());
+                log.warn("Parsing URL cloud échoué, repli sur conversion simple : {}", e.getMessage());
             }
         }
 
-        // Format JDBC classique sans '@'
+        // Format JDBC classique ou sans '@'
         String jdbcUrl = trimmed;
         if (!jdbcUrl.startsWith("jdbc:")) {
             if (jdbcUrl.startsWith("postgres://")) {
@@ -106,64 +103,31 @@ public class DatabaseConfig {
         return new ConnectionInfo(jdbcUrl, fallbackUser, fallbackPassword);
     }
 
+    /**
+     * Crée la DataSource en injectant les propriétés brutes directement via @Value,
+     * court-circuitant ainsi la validation d'URL de DataSourceProperties qui rejette
+     * les URLs de type 'postgresql://' (sans préfixe 'jdbc:').
+     */
     @Bean
     @Primary
-    @ConfigurationProperties("spring.datasource")
-    public DataSourceProperties dataSourceProperties() {
-        return new DataSourceProperties() {
-            @Override
-            public void setUrl(String url) {
-                ConnectionInfo info = parseConnectionInfo(url, getUsername(), getPassword());
-                super.setUrl(info.jdbcUrl());
-                if (StringUtils.hasText(info.username())) {
-                    super.setUsername(info.username());
-                }
-                if (StringUtils.hasText(info.password())) {
-                    super.setPassword(info.password());
-                }
-            }
+    public DataSource dataSource(
+            @Value("${spring.datasource.url:jdbc:postgresql://localhost:5432/minideskdb}") String rawUrl,
+            @Value("${spring.datasource.username:postgres}") String rawUsername,
+            @Value("${spring.datasource.password:admin}")    String rawPassword) {
 
-            @Override
-            public String determineUrl() {
-                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), getUsername(), getPassword());
-                return info.jdbcUrl();
-            }
+        ConnectionInfo info = parseConnectionInfo(rawUrl, rawUsername, rawPassword);
 
-            @Override
-            public String determineUsername() {
-                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), super.determineUsername(), getPassword());
-                return info.username();
-            }
+        log.info("Initialisation DataSource → url={}, user={}", info.jdbcUrl(), info.username());
 
-            @Override
-            public String determinePassword() {
-                ConnectionInfo info = parseConnectionInfo(super.determineUrl(), getUsername(), super.determinePassword());
-                return info.password();
-            }
-
-            @Override
-            public String determineDriverClassName() {
-                String existing = super.getDriverClassName();
-                if (StringUtils.hasText(existing)) {
-                    return existing;
-                }
-                return "org.postgresql.Driver";
-            }
-        };
-    }
-
-    @Bean
-    @Primary
-    public DataSource dataSource(DataSourceProperties properties) {
-        ConnectionInfo info = parseConnectionInfo(properties.determineUrl(), properties.determineUsername(), properties.determinePassword());
-
-        log.info("Initialisation de la DataSource avec URL JDBC: {}, user: {}", info.jdbcUrl(), info.username());
-
-        return DataSourceBuilder.create()
-                .driverClassName(properties.determineDriverClassName())
-                .url(info.jdbcUrl())
-                .username(info.username())
-                .password(info.password())
-                .build();
+        HikariDataSource ds = new HikariDataSource();
+        ds.setDriverClassName("org.postgresql.Driver");
+        ds.setJdbcUrl(info.jdbcUrl());
+        if (StringUtils.hasText(info.username())) {
+            ds.setUsername(info.username());
+        }
+        if (StringUtils.hasText(info.password())) {
+            ds.setPassword(info.password());
+        }
+        return ds;
     }
 }
