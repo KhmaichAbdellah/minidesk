@@ -5,6 +5,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,12 +17,18 @@ public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Value("${spring.mail.username:}")
+    private String fromEmail;
+
     @Override
     public void sendEmail(String toEmail, String name, String password) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            if (fromEmail != null && !fromEmail.isBlank()) {
+                helper.setFrom(fromEmail, "MiniDesk Support");
+            }
             helper.setTo(toEmail);
             helper.setSubject("🎫 Bienvenue sur MiniDesk - Vos identifiants");
             helper.setText(buildEmailBody(name, toEmail, password), true);
@@ -30,7 +37,7 @@ public class EmailServiceImpl implements EmailService {
             log.info("Email de bienvenue envoyé avec succès à : {}", toEmail);
 
         } catch (Exception e) {
-            log.warn("Impossible d'envoyer l'email de bienvenue à {} (SMTP non configuré ou inaccessible) : {}. Mot de passe généré : {}", toEmail, e.getMessage(), password);
+            log.warn("Impossible d'envoyer l'email de bienvenue à {} : {}. Mot de passe généré : {}", toEmail, e.getMessage(), password);
         }
     }
 
