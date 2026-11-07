@@ -100,4 +100,14 @@ public class UserController {
         userService.toggleUserStatus(id);
         return ResponseEntity.ok("Statut du compte mis à jour avec succès");
     }
+
+    // ── POST /api/admin/users/{id}/reset-password ───────────────────────────
+    @Operation(summary = "Réinitialiser le mot de passe d'un utilisateur",
+        description = "Génère un nouveau mot de passe aléatoire, l'envoie par email et le retourne dans la réponse.")
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<java.util.Map<String, String>> resetPassword(
+            @Parameter(description = "ID de l'utilisateur", example = "1") @PathVariable Long id) {
+        String newPassword = userService.resetPassword(id);
+        return ResponseEntity.ok(java.util.Map.of("temporaryPassword", newPassword));
+    }
 }

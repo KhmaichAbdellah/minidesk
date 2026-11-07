@@ -63,6 +63,15 @@ export const toggleUserStatus = (id) =>
   api.patch(`${USERS_URL}/${id}/toggle`).then((res) => res.data);
 
 /**
+ * Réinitialiser le mot de passe d'un utilisateur.
+ * POST /api/admin/users/{id}/reset-password
+ * @param {number} id - Identifiant de l'utilisateur
+ * @returns {Promise<{ temporaryPassword: string }>}
+ */
+export const resetUserPassword = (id) =>
+  api.post(`${USERS_URL}/${id}/reset-password`).then((res) => res.data);
+
+/**
  * Récupérer le profil de l'utilisateur connecté.
  * GET /api/profile
  * @returns {Promise<Object>} Le profil de l'utilisateur courant

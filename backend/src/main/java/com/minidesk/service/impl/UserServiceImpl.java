@@ -139,7 +139,9 @@ public class UserServiceImpl implements UserService {
         // IMPORTANT : envoyer AVANT de perdre la référence au mot de passe en clair
         emailService.sendEmail(saved.getEmail(), saved.getName(), rawPassword);
 
-        return toResponse(saved);
+        UserResponse response = toResponse(saved);
+        response.setTemporaryPassword(rawPassword);
+        return response;
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -317,5 +319,18 @@ public class UserServiceImpl implements UserService {
         // Hasher et sauvegarder le nouveau mot de passe
         user.setPassword(passwordEncoder.encode(newPassword));  // Hash BCrypt
         userRepository.save(user);  // UPDATE SQL : SET password = ?
+    }
+
+    @Override
+    public String resetPassword(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'id : " + id));
+
+        String newPassword = generatePassword();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        emailService.sendEmail(user.getEmail(), user.getName(), newPassword);
+        return newPassword;
     }
 }
