@@ -3,13 +3,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Étapes :
 //   1. Checkout        → récupère le code depuis GitLab
-//   2. Test Backend    → mvn test (JUnit/Spring)
-//   3. Build Backend   → mvn package → JAR
-//   4. Build Frontend  → npm ci + npm run build
-//   5. Docker Build    → construit les images backend & frontend
-//   6. Docker Push     → pousse vers GitLab Container Registry
-//   7. Deploy Staging  → kubectl apply sur le namespace staging
-//   8. Deploy Prod     → kubectl apply sur le namespace prod (avec approbation manuelle)
+//   2. Test Backend    → mvn test (JUnit/Spring) + rapport JaCoCo
+//   3. SonarQube       → analyse statique de la qualité du code
+//   4. Lint Frontend   → npm run lint
+//   5. Build Backend   → mvn package → JAR
+//   6. Build Frontend  → npm ci + npm run build
+//   7. Docker Build    → construit les images backend & frontend
+//   8. Docker Push     → pousse vers GitLab Container Registry
+//   9. Deploy Staging  → kubectl apply sur le namespace staging
+//  10. Deploy Prod     → kubectl apply sur le namespace prod (approbation manuelle)
 // ═══════════════════════════════════════════════════════════════════════════
 
 pipeline {
@@ -30,6 +32,12 @@ pipeline {
         // Credential IDs définis dans Jenkins Credentials Manager
         GITLAB_CREDS      = credentials('gitlab-registry-credentials')
         KUBECONFIG_CREDS  = credentials('kubeconfig-secret')
+        SONAR_TOKEN       = credentials('sonarcloud-token')   // Token SonarCloud
+
+        // SonarCloud
+        SONAR_HOST_URL    = 'https://sonarcloud.io'
+        SONAR_PROJECT_KEY = 'KhmaichAbdellah_minidesk'
+        SONAR_ORG         = 'khmaichabdellah'
 
         // Tag de l'image = numéro de build Jenkins + court SHA Git
         IMAGE_TAG         = "${BUILD_NUMBER}-${GIT_COMMIT.take(8)}"
@@ -79,7 +87,7 @@ pipeline {
             }
             steps {
                 dir('backend') {
-                    sh 'mvn test -B'
+                    sh 'mvn test -B jacoco:report'
                 }
             }
             post {
@@ -87,11 +95,46 @@ pipeline {
                     // Publier les rapports JUnit dans Jenkins
                     junit allowEmptyResults: true,
                           testResults: 'backend/target/surefire-reports/*.xml'
+                    // Publier le rapport de couverture JaCoCo
+                    jacoco(
+                        execPattern: 'backend/target/jacoco.exec',
+                        classPattern: 'backend/target/classes',
+                        sourcePattern: 'backend/src/main/java',
+                        exclusionPattern: '**/config/**,**/entity/**,**/dto/**,**/exception/**'
+                    )
                 }
             }
         }
 
-        // ── Stage 3 : Lint Frontend ───────────────────────────────────────────
+        // ── Stage 3 : Analyse SonarQube ───────────────────────────────────────
+        stage('🔍 SonarQube Analysis') {
+            agent {
+                docker {
+                    image 'maven:3.9.9-eclipse-temurin-21'
+                    args '-v $HOME/.m2:/root/.m2 -v $HOME/.sonar:/root/.sonar'
+                    reuseNode true
+                }
+            }
+            steps {
+                dir('backend') {
+                    sh """
+                        mvn -B sonar:sonar \\
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
+                            -Dsonar.organization=${SONAR_ORG} \\
+                            -Dsonar.host.url=${SONAR_HOST_URL} \\
+                            -Dsonar.token=${SONAR_TOKEN} \\
+                            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                    """
+                }
+            }
+            post {
+                always {
+                    echo "📊 Rapport SonarCloud : https://sonarcloud.io/project/overview?id=${SONAR_PROJECT_KEY}"
+                }
+            }
+        }
+
+        // ── Stage 4 : Lint Frontend ───────────────────────────────────────────
         stage('🔍 Lint Frontend') {
             agent {
                 docker {
