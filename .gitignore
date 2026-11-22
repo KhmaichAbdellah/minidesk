@@ -17,7 +17,8 @@ replay_pid*.log
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-**/package-lock.json
+# package-lock.json est versionné pour garantir des builds CI reproductibles
+# **/package-lock.json
 
 # Environment & Secrets (NE JAMAIS COMMITER !)
 .env

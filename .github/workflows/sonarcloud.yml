@@ -88,13 +88,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: 📦 Installer les dépendances
         run: |
           cd frontend
-          npm ci
+          npm install
 
       - name: 🔎 Lint ESLint
         run: |
@@ -114,3 +112,4 @@ jobs:
             -Dsonar.sources=frontend/src
             -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,backend/**
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+
