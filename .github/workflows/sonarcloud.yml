@@ -50,17 +50,13 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      - name: 🔑 Rendre mvnw exécutable
+        run: chmod +x backend/mvnw
+
       - name: 🧪 Tests + JaCoCo + Analyse SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Variables d'environnement minimales pour le build (pas de vraie DB)
-          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
-          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
-          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
-          JWT_SECRET: test-secret-key-for-ci-only-not-used-in-prod
-          MAIL_USERNAME: test@example.com
-          MAIL_PASSWORD: test-password
           LLM_MOCK: "true"
         run: |
           cd backend
