@@ -80,6 +80,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: ☕ Configurer Java 21 (requis pour SonarCloud)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       - name: 🟢 Configurer Node.js 22
         uses: actions/setup-node@v4
         with:
