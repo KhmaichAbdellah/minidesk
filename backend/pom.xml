@@ -28,6 +28,32 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- ── SonarQube ─────────────────────────────────────────────── -->
+		<sonar.organization>khmaichabdellah</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<sonar.projectKey>KhmaichAbdellah_minidesk</sonar.projectKey>
+		<sonar.projectName>MiniDesk</sonar.projectName>
+		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+		<sonar.coverage.jacoco.xmlReportPaths>
+			${project.build.directory}/site/jacoco/jacoco.xml
+		</sonar.coverage.jacoco.xmlReportPaths>
+		<!-- Exclure les classes générées / config / entités simples -->
+		<sonar.exclusions>
+			**/config/**,
+			**/entity/**,
+			**/dto/**,
+			**/exception/**,
+			**/*Application.java,
+			**/DataInitializer.java
+		</sonar.exclusions>
+		<sonar.coverage.exclusions>
+			**/config/**,
+			**/entity/**,
+			**/dto/**,
+			**/exception/**,
+			**/*Application.java,
+			**/DataInitializer.java
+		</sonar.coverage.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -102,6 +128,33 @@
 
 	<build>
 		<plugins>
+			<!-- ── JaCoCo : couverture de code ──────────────────────────── -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<!-- Agent JaCoCo activé avant les tests -->
+					<execution>
+						<id>prepare-agent</id>
+						<goals><goal>prepare-agent</goal></goals>
+					</execution>
+					<!-- Rapport XML généré après les tests (lu par SonarQube) -->
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals><goal>report</goal></goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- ── SonarQube Maven plugin ────────────────────────────────── -->
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>5.0.0.4389</version>
+			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

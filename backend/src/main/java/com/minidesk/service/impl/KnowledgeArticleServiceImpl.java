@@ -101,7 +101,7 @@ public class KnowledgeArticleServiceImpl implements KnowledgeArticleService {
                 .title(article.getTitle())
                 .content(article.getContent())
                 .category(article.getCategory())
-                .keywords(article.getKeywords())
+                .keywords(article.getKeywords() != null ? new ArrayList<>(article.getKeywords()) : new ArrayList<>())
                 .authorId(article.getAuthor() != null ? article.getAuthor().getId() : null)
                 .authorName(article.getAuthor() != null ? article.getAuthor().getName() : "Auteur inconnu")
                 .authorEmail(article.getAuthor() != null ? article.getAuthor().getEmail() : null)

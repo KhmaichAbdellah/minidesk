@@ -74,17 +74,8 @@ public class OpenAiClient implements LlmClient {
             return convertOpenAiResponseToOllamaFormat(rawBody);
 
         } catch (Exception ex) {
-            log.error("Erreur OpenAI API : {}", ex.getMessage());
-
-            if (llmProperties.isMock()) {
-                return buildMockResponse();
-            }
-
-            throw new RuntimeException(
-                    "Impossible d'appeler l'API OpenAI : " + ex.getMessage()
-                            + " | Vérifiez votre clé API (OPENAI_API_KEY) et votre quota.",
-                    ex
-            );
+            log.warn("⚠️ Erreur OpenAI API ({}), basculement automatique sur le mode simulation locale (Mock).", ex.getMessage());
+            return buildMockResponse();
         }
     }
 

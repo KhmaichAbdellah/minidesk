@@ -1,7 +1,11 @@
 package com.minidesk.service.llm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Implémentation simulée du client LLM.
@@ -16,6 +20,8 @@ public class MockLlmClient implements LlmClient {
 
     private static final String MOCK_ENDPOINT = "mock://localhost";
     private static final String MOCK_MODEL    = "mock-v1";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public String sendPrompt(String prompt) {
@@ -35,29 +41,41 @@ public class MockLlmClient implements LlmClient {
         if (userMessage != null) {
             String lower = userMessage.toLowerCase().trim();
 
-            // Salutations
-            if (lower.matches(".*(bonjour|salut|hello|bonsoir|hey|coucou|bonne journée).*")) {
+            // 0. Problème Base de données / PostgreSQL / SQL (prioritaire)
+            if (lower.matches(".*(postgre|postgres|postgresql|base de donn[ée]es|bdd|database|sql|psql|hibernate|pg_ctl).*")) {
                 return buildChatResponse(
-                    "Bonjour ! 👋 Je suis **MILO**, votre assistant IT MiniDesk. Comment puis-je vous aider aujourd'hui ?\n\n" +
-                    "Je peux vous aider avec :\n" +
-                    "- 🖥️ Des problèmes matériels ou logiciels\n" +
-                    "- 🌐 Des questions réseau ou système\n" +
-                    "- 🔧 Du support applicatif ou DevOps\n\n" +
-                    "Décrivez votre problème et je ferai de mon mieux pour vous guider !",
-                    false, null, null
+                    "Bonjour ! Problème de base de données PostgreSQL détecté. Voici les vérifications et manipulations à réaliser :\n\n" +
+                    "**1. Vérifier si le serveur PostgreSQL est bien démarré**\n" +
+                    "```powershell\n# Si vous utilisez Docker :\ndocker compose up -d postgres\n\n# Si vous utilisez le service local Windows :\nGet-Service *postgres*\nnet start postgresql-x64-18\n```\n\n" +
+                    "**2. Tester l'écoute sur le port 5432**\n" +
+                    "```powershell\nTest-NetConnection -ComputerName localhost -Port 5432\n```\n\n" +
+                    "**3. Vérifier les identifiants dans `.env` ou `application.yaml`**\n" +
+                    "- Hôte : `localhost` (ou `postgres` sous Docker)\n" +
+                    "- Port : `5432`\n" +
+                    "- Nom de la base : `minideskdb`\n" +
+                    "- Utilisateur : `postgres`\n" +
+                    "- Mot de passe : variable `DB_PASSWORD` (ou `SPRING_DATASOURCE_PASSWORD`)\n\n" +
+                    "Voulez-vous que je crée un ticket de support incident pour le pôle Base de données / DevOps ?",
+                    true, "Incident Base de données PostgreSQL / Connexion échouée", "L'utilisateur signale une erreur de connexion à la base de données PostgreSQL (port 5432)."
                 );
             }
 
-            // Remerciements / résolution
-            if (lower.matches(".*(merci|thank|c'est bon|c'est résolu|ça marche|résolu|regle|parfait|nickel).*")) {
+            // 1. Problème réseau / connexion internet (avec ou sans accents)
+            if (lower.matches(".*(r[ée]seau|internet|wifi|wi-fi|ethernet|dns|ip|ping|vpn|proxy|d[ée]connect|connexion internet).*")) {
                 return buildChatResponse(
-                    "Avec plaisir ! 😊 N'hésitez pas à revenir si vous avez d'autres questions.\n\n" +
-                    "Si votre problème est résolu, vous pouvez le confirmer et je créerai automatiquement un ticket résolu pour la traçabilité.",
-                    false, null, null
+                    "Bonjour ! Problème réseau détecté. Voici les diagnostics et manipulations à réaliser :\n\n" +
+                    "**1. Vérifier la connectivité locale et passerelle**\n" +
+                    "```powershell\nping 127.0.0.1\nping 8.8.8.8\ntracert google.com\n```\n\n" +
+                    "**2. Réinitialiser la pile IP & vider le cache DNS**\n" +
+                    "```powershell\nipconfig /release\nipconfig /renew\nipconfig /flushdns\n```\n\n" +
+                    "**3. Vérifier les adaptateurs réseau**\n" +
+                    "Assurez-vous que votre carte Wi-Fi ou Ethernet est bien activée dans `ncpa.cpl`.\n\n" +
+                    "Voulez-vous que je crée un ticket de support incident pour le pôle Réseau ?",
+                    true, "Incident Réseau / Perte de connectivité", "L'utilisateur signale un dysfonctionnement réseau ou une perte d'accès internet."
                 );
             }
 
-            // Problème avec la voix / micro / audio
+            // 2. Problème avec la voix / micro / audio
             if (lower.matches(".*(voix|micro|microphone|audio|son|casque|headset|speak|haut.parleur|volume).*")) {
                 return buildChatResponse(
                     "Je comprends que vous avez un problème audio/microphone. Voici les étapes à vérifier :\n\n" +
@@ -75,21 +93,8 @@ public class MockLlmClient implements LlmClient {
                 );
             }
 
-            // Problème réseau / connexion
-            if (lower.matches(".*(réseau|internet|connexion|wifi|ethernet|dns|ip|ping|vpn|proxy|déconnect).*")) {
-                return buildChatResponse(
-                    "Problème réseau détecté. Voici les diagnostics de base :\n\n" +
-                    "**1. Vérifier la connectivité**\n" +
-                    "```powershell\nping 8.8.8.8\ntracert google.com\n```\n\n" +
-                    "**2. Renouveler le bail DHCP**\n" +
-                    "```powershell\nipconfig /release\nipconfig /renew\nipconfig /flushdns\n```\n\n" +
-                    "Décrivez plus précisément votre problème pour une aide ciblée.",
-                    false, null, null
-                );
-            }
-
-            // Problème mot de passe / accès / login
-            if (lower.matches(".*(mot de passe|password|mdp|login|connexion|accès|compte|verrouillé|bloqué).*")) {
+            // 3. Problème mot de passe / accès / login
+            if (lower.matches(".*(mot de passe|password|mdp|login|connexion|acc[èe]s|compte|verrouill[ée]|bloqu[ée]).*")) {
                 return buildChatResponse(
                     "Problème d'accès ou de mot de passe. Voici les options :\n\n" +
                     "**1. Réinitialiser votre mot de passe** — Contactez votre administrateur système.\n\n" +
@@ -101,8 +106,8 @@ public class MockLlmClient implements LlmClient {
                 );
             }
 
-            // Imprimante / périphérique
-            if (lower.matches(".*(imprimante|printer|scanner|imprimer|impression|peripherique|périphérique|usb|bluetooth).*")) {
+            // 4. Imprimante / périphérique
+            if (lower.matches(".*(imprimante|printer|scanner|imprimer|impression|peripherique|p[ée]riph[ée]rique|usb|bluetooth).*")) {
                 return buildChatResponse(
                     "Problème avec un périphérique. Checklist rapide :\n\n" +
                     "**1. Vérifier la connexion physique**\n" +
@@ -113,6 +118,28 @@ public class MockLlmClient implements LlmClient {
                     "**3. Redémarrer le spouleur d'impression**\n" +
                     "```powershell\nRestart-Service -Name Spooler\n```\n\n" +
                     "Quel est exactement le modèle de l'imprimante et le message d'erreur affiché ?",
+                    false, null, null
+                );
+            }
+
+            // 5. Remerciements / résolution
+            if (lower.matches(".*(merci|thank|c'est bon|c'est r[ée]solu|ça marche|r[ée]solu|regl[ée]|parfait|nickel).*")) {
+                return buildChatResponse(
+                    "Avec plaisir ! 😊 N'hésitez pas à revenir si vous avez d'autres questions.\n\n" +
+                    "Si votre problème est résolu, vous pouvez le confirmer et je créerai automatiquement un ticket résolu pour la traçabilité.",
+                    false, null, null
+                );
+            }
+
+            // 6. Salutations simples
+            if (lower.matches(".*(bonjour|salut|hello|bonsoir|hey|coucou|bonne journ[ée]e).*")) {
+                return buildChatResponse(
+                    "Bonjour ! 👋 Je suis **MILO**, votre assistant IT MiniDesk. Comment puis-je vous aider aujourd'hui ?\n\n" +
+                    "Je peux vous aider avec :\n" +
+                    "- 🖥️ Des problèmes matériels ou logiciels\n" +
+                    "- 🌐 Des questions réseau ou système\n" +
+                    "- 🔧 Du support applicatif ou DevOps\n\n" +
+                    "Décrivez votre problème et je ferai de mon mieux pour vous guider !",
                     false, null, null
                 );
             }
@@ -178,38 +205,53 @@ public class MockLlmClient implements LlmClient {
      * Retourne une réponse JSON simulée pour la génération de ticket.
      */
     private String buildTicketGenerationResponse() {
-        return """
-                {
-                  "message": {
-                    "content": "{\\"title\\":\\"Demande d'assistance IT\\",\\"description\\":\\"Ticket généré automatiquement en mode démonstration.\\",\\"category\\":\\"OTHER\\",\\"priority\\":\\"NORMALE\\"}"
-                  }
-                }
-                """;
+        try {
+            Map<String, Object> contentMap = new LinkedHashMap<>();
+            contentMap.put("title", "Demande d'assistance IT");
+            contentMap.put("description", "Ticket généré automatiquement en mode démonstration.");
+            contentMap.put("category", "OTHER");
+            contentMap.put("priority", "NORMALE");
+
+            String contentJson = objectMapper.writeValueAsString(contentMap);
+
+            Map<String, Object> messageMap = new LinkedHashMap<>();
+            messageMap.put("content", contentJson);
+
+            Map<String, Object> rootMap = new LinkedHashMap<>();
+            rootMap.put("message", messageMap);
+
+            return objectMapper.writeValueAsString(rootMap);
+        } catch (Exception e) {
+            log.error("Erreur JSON ticket mock", e);
+            return "{\"message\":{\"content\":\"{}\"}}";
+        }
     }
 
     /**
      * Retourne une réponse JSON au format Ollama simulé pour le chat.
      */
     private String buildChatResponse(String reply, boolean createTicket, String title, String description) {
-        // Échapper les guillemets dans la réponse
-        String escapedReply = reply
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n");
+        try {
+            Map<String, Object> contentMap = new LinkedHashMap<>();
+            contentMap.put("reply", reply);
+            contentMap.put("create_ticket", createTicket);
+            contentMap.put("title", title);
+            contentMap.put("description", description);
 
-        return String.format("""
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "{\\\"reply\\\":\\\"%s\\\",\\\"create_ticket\\\":%s,\\\"title\\\":%s,\\\"description\\\":%s}"
-                  },
-                  "done": true
-                }
-                """,
-            escapedReply,
-            createTicket,
-            title != null ? "\"" + title + "\"" : "null",
-            description != null ? "\"" + description + "\"" : "null"
-        );
+            String contentJson = objectMapper.writeValueAsString(contentMap);
+
+            Map<String, Object> messageMap = new LinkedHashMap<>();
+            messageMap.put("role", "assistant");
+            messageMap.put("content", contentJson);
+
+            Map<String, Object> rootMap = new LinkedHashMap<>();
+            rootMap.put("message", messageMap);
+            rootMap.put("done", true);
+
+            return objectMapper.writeValueAsString(rootMap);
+        } catch (Exception e) {
+            log.error("Erreur lors de la génération du JSON mock", e);
+            return "{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"reply\\\":\\\"Bonjour ! Comment puis-je vous aider ?\\\"}\"},\"done\":true}";
+        }
     }
 }

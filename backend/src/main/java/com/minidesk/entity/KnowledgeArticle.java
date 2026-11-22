@@ -32,14 +32,14 @@ public class KnowledgeArticle {
     @Column(nullable = false)
     private TicketCategory category;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "article_keywords", joinColumns = @JoinColumn(name = "article_id"))
 
     @Column(name = "keyword")
     @Builder.Default
     private List<String> keywords = new ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 

@@ -15,6 +15,7 @@ import com.minidesk.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TicketServiceImpl implements TicketService {
 
     // Repository JPA pour toutes les opérations CRUD sur les tickets
@@ -86,6 +88,7 @@ public class TicketServiceImpl implements TicketService {
      * @return DTO TicketResponse du ticket créé (avec son ID généré)
      */
     @Override
+    @Transactional
     public TicketResponse createTicket(TicketRequest request, User currentUser) {
 
         // ── Résoudre l'utilisateur assigné si un ID est fourni ───────────────
@@ -208,6 +211,7 @@ public class TicketServiceImpl implements TicketService {
      * @throws AccessDeniedException     si un USER tente de modifier le ticket d'un autre
      */
     @Override
+    @Transactional
     public TicketResponse updateTicket(Long id, TicketRequest request, User currentUser) {
         // ── Vérifier l'existence du ticket ────────────────────────────────────
         Ticket ticket = ticketRepository.findById(id)
@@ -262,6 +266,7 @@ public class TicketServiceImpl implements TicketService {
 
 
     @Override
+    @Transactional
     public void deleteTicket(Long id) {
         // Vérifier que le ticket existe avant suppression pour retourner 404 si introuvable
         if (!ticketRepository.existsById(id)) {

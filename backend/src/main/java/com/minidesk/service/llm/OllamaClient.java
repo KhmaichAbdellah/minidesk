@@ -79,17 +79,8 @@ public class OllamaClient implements LlmClient {
             return response.getBody();
 
         } catch (Exception ex) {
-
-            log.error("Erreur Ollama", ex);
-
-            if (llmProperties.isMock()) {
-                return buildMockResponse(prompt);
-            }
-
-            throw new RuntimeException(
-                    "Impossible d'appeler Ollama : " + ex.getMessage(),
-                    ex
-            );
+            log.warn("⚠️ Ollama n'est pas joignable sur {} ({}), basculement automatique sur le mode simulation locale (Mock).", endpoint, ex.getMessage());
+            return buildMockResponse(prompt);
         }
     }
 

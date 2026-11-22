@@ -1,0 +1,116 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# .github/workflows/sonarcloud.yml
+# GitHub Actions — Analyse SonarCloud pour MiniDesk
+# ═══════════════════════════════════════════════════════════════════════════
+# Secrets GitHub requis (Settings → Secrets → Actions) :
+#   SONAR_TOKEN   → Token SonarCloud (généré sur sonarcloud.io)
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: 🔍 SonarCloud Analysis
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Job 1 — Analyse Backend (Java / Spring Boot) avec JaCoCo + SonarCloud
+  # ─────────────────────────────────────────────────────────────────────────
+  sonar-backend:
+    name: 🧪 Backend · Tests + SonarCloud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Nécessaire pour SonarCloud (analyse des branches)
+
+      - name: ☕ Configurer Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🗄️ Cache SonarCloud
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: 🗄️ Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: 🧪 Tests + JaCoCo + Analyse SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Variables d'environnement minimales pour le build (pas de vraie DB)
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
+          JWT_SECRET: test-secret-key-for-ci-only-not-used-in-prod
+          MAIL_USERNAME: test@example.com
+          MAIL_PASSWORD: test-password
+          LLM_MOCK: "true"
+        run: |
+          cd backend
+          ./mvnw -B verify sonar:sonar \
+            -Dsonar.projectKey=KhmaichAbdellah_minidesk \
+            -Dsonar.organization=khmaichabdellah \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Job 2 — Analyse Frontend (React / JS) avec SonarCloud
+  # ─────────────────────────────────────────────────────────────────────────
+  sonar-frontend:
+    name: 🎨 Frontend · Lint + SonarCloud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🟢 Configurer Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Installer les dépendances
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 🔎 Lint ESLint
+        run: |
+          cd frontend
+          npm run lint || true
+
+      - name: 🔍 Analyse SonarCloud Frontend
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=KhmaichAbdellah_minidesk
+            -Dsonar.organization=khmaichabdellah
+            -Dsonar.sources=frontend/src
+            -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,backend/**
+            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info

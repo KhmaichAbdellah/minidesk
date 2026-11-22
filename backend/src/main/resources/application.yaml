@@ -20,8 +20,8 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
-    # Désactive le proxy de vue JPA (open-in-view) — améliore les perfs en prod
-    open-in-view: false
+    # Maintient la session JPA ouverte pendant le rendu de la vue / sérialisation JSON
+    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW:true}
 
   # ── Configuration du service d'envoi d'email (SMTP Gmail) ────────────────────
   mail:
@@ -42,10 +42,10 @@ logging:
     org.springframework.security: WARN
 
 # ── Configuration du moteur LLM (IA) ─────────────────────────────────────────
-# En développement local  : LLM_PROVIDER=ollama dans .env
-# En production           : LLM_PROVIDER=openai dans .env
+# En développement local  : LLM_PROVIDER=ollama (défaut)
+# En production           : LLM_PROVIDER=openai + OPENAI_API_KEY
 llm:
-  provider: ${LLM_PROVIDER:openai}
+  provider: ${LLM_PROVIDER:ollama}
   mock: ${LLM_MOCK:false}
   max-new-tokens: ${LLM_MAX_NEW_TOKENS:512}
   temperature: ${LLM_TEMPERATURE:0.3}
