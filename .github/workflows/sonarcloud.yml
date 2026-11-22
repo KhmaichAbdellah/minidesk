@@ -102,16 +102,13 @@ jobs:
           npm run lint || true
 
       - name: 🔍 Analyse SonarCloud Frontend
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectBaseDir: .
           args: >
             -Dsonar.projectKey=khmaichabdellah-minidesk
             -Dsonar.organization=khmaichabdellah-minidesk
             -Dsonar.sources=frontend/src
             -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,backend/**
-            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
 
