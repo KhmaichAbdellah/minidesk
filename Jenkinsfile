@@ -19,8 +19,8 @@ pipeline {
     environment {
         // SonarCloud
         SONAR_HOST_URL    = 'https://sonarcloud.io'
-        SONAR_PROJECT_KEY = 'KhmaichAbdellah_minidesk'
-        SONAR_ORG         = 'khmaichabdellah'
+        SONAR_PROJECT_KEY = 'khmaichabdellah-minidesk'
+        SONAR_ORG         = 'khmaichabdellah-minidesk'
 
         // Registry (GitLab)
         REGISTRY          = 'registry.gitlab.com'

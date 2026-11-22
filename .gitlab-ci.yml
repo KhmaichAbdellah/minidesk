@@ -89,8 +89,8 @@ sonar:backend:
     - cd backend
     - mvn -B verify sonar:sonar
         -Dmaven.repo.local=.m2/repository
-        -Dsonar.projectKey=KhmaichAbdellah_minidesk
-        -Dsonar.organization=khmaichabdellah
+        -Dsonar.projectKey=khmaichabdellah-minidesk
+        -Dsonar.organization=khmaichabdellah-minidesk
         -Dsonar.host.url=https://sonarcloud.io
         -Dsonar.token=$SONAR_TOKEN
         -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
@@ -125,8 +125,8 @@ sonar:frontend:
   script:
     - cd frontend && npm ci
     - sonar-scanner
-        -Dsonar.projectKey=KhmaichAbdellah_minidesk
-        -Dsonar.organization=khmaichabdellah
+        -Dsonar.projectKey=khmaichabdellah-minidesk
+        -Dsonar.organization=khmaichabdellah-minidesk
         -Dsonar.sources=src
         -Dsonar.host.url=https://sonarcloud.io
         -Dsonar.token=$SONAR_TOKEN

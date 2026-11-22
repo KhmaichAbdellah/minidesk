@@ -10,9 +10,9 @@ name: 🔍 SonarCloud Analysis
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, master, develop]
     types: [opened, synchronize, reopened]
 
 jobs:
@@ -61,8 +61,8 @@ jobs:
         run: |
           cd backend
           ./mvnw -B verify sonar:sonar \
-            -Dsonar.projectKey=KhmaichAbdellah_minidesk \
-            -Dsonar.organization=khmaichabdellah \
+            -Dsonar.projectKey=khmaichabdellah-minidesk \
+            -Dsonar.organization=khmaichabdellah-minidesk \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=$SONAR_TOKEN \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
@@ -103,8 +103,8 @@ jobs:
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.projectKey=KhmaichAbdellah_minidesk
-            -Dsonar.organization=khmaichabdellah
+            -Dsonar.projectKey=khmaichabdellah-minidesk
+            -Dsonar.organization=khmaichabdellah-minidesk
             -Dsonar.sources=frontend/src
             -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,backend/**
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
