@@ -33,7 +33,6 @@
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.projectKey>khmaichabdellah-minidesk</sonar.projectKey>
 		<sonar.projectName>MiniDesk</sonar.projectName>
-		<sonar.scanner.skipJreProvisioning>true</sonar.scanner.skipJreProvisioning>
 		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
 		<sonar.coverage.jacoco.xmlReportPaths>
 			${project.build.directory}/site/jacoco/jacoco.xml

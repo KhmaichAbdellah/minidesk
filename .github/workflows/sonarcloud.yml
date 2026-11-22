@@ -1,9 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # .github/workflows/sonarcloud.yml
-# GitHub Actions — Analyse SonarCloud pour MiniDesk
-# ═══════════════════════════════════════════════════════════════════════════
-# Secrets GitHub requis (Settings → Secrets → Actions) :
-#   SONAR_TOKEN   → Token SonarCloud (généré sur sonarcloud.io)
+# GitHub Actions — Analyse SonarCloud complète (Backend Java + Frontend React)
 # ═══════════════════════════════════════════════════════════════════════════
 
 name: 🔍 SonarCloud Analysis
@@ -16,18 +13,15 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────
-  # Job 1 — Analyse Backend (Java / Spring Boot) avec JaCoCo + SonarCloud
-  # ─────────────────────────────────────────────────────────────────────────
-  sonar-backend:
-    name: 🧪 Backend · Tests + SonarCloud
+  sonarcloud:
+    name: 🚀 Build, Test & SonarCloud Analysis
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Checkout du code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Nécessaire pour SonarCloud (analyse des branches)
+          fetch-depth: 0
 
       - name: ☕ Configurer Java 21
         uses: actions/setup-java@v4
@@ -36,24 +30,23 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: 🗄️ Cache SonarCloud
-        uses: actions/cache@v4
+      - name: 🟢 Configurer Node.js 22
+        uses: actions/setup-node@v4
         with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: 🗄️ Cache Maven
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+      - name: 📦 Installer et vérifier Frontend (Lint)
+        run: |
+          cd frontend
+          npm ci
+          npm run lint || true
 
       - name: 🔑 Rendre mvnw exécutable
         run: chmod +x backend/mvnw
 
-      - name: 🧪 Tests + JaCoCo + Analyse SonarCloud
+      - name: 🧪 Tests Backend + JaCoCo + Analyse SonarCloud Unifiée
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -65,50 +58,6 @@ jobs:
             -Dsonar.organization=khmaichabdellah-minidesk \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=$SONAR_TOKEN \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Job 2 — Analyse Frontend (React / JS) avec SonarCloud
-  # ─────────────────────────────────────────────────────────────────────────
-  sonar-frontend:
-    name: 🎨 Frontend · Lint + SonarCloud
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 📥 Checkout du code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: ☕ Configurer Java 21 (requis pour SonarCloud)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: 🟢 Configurer Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: 📦 Installer les dépendances
-        run: |
-          cd frontend
-          npm install
-
-      - name: 🔎 Lint ESLint
-        run: |
-          cd frontend
-          npm run lint || true
-
-      - name: 🔍 Analyse SonarCloud Frontend
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=khmaichabdellah-minidesk
-            -Dsonar.organization=khmaichabdellah-minidesk
-            -Dsonar.sources=frontend/src
-            -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,backend/**
-
+            -Dsonar.sources=src/main/java,../frontend/src \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+            -Dsonar.exclusions="**/node_modules/**,**/dist/**,**/config/**,**/entity/**,**/dto/**,**/exception/**"
